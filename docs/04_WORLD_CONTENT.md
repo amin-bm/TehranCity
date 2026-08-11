@@ -26,7 +26,7 @@ owner: Project Lead
 | کوچه و خیابان کوچک | Exterior | واجب |
 | پاساژ مغازه موبایل | Full Interior | واجب |
 | سوپر مارکت یا غذاخوری | Interactive Facade | واجب |
-| دکه / کیوسک خالی | Interactive Facade | واجب |
+| مغازه خیلی کوچک خالی | Interactive Facade | واجب |
 | ایستگاه اتوبوس / مترو | Decorative/Optional | اختیاری |
 
 ## سطح‌بندی ساختمان‌ها
