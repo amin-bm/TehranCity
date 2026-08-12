@@ -28,6 +28,14 @@ public static class HUDSetup
             so.FindProperty("nextScene").stringValue = "Interior_Room01";
             so.ApplyModifiedPropertiesWithoutUndo();
         }
+        if (GameObject.Find("Main Camera") == null)
+        {
+            var cam = new GameObject("Main Camera");
+            cam.tag = "MainCamera";
+            var c = cam.AddComponent<Camera>();
+            c.clearFlags = CameraClearFlags.SolidColor;
+            c.backgroundColor = Color.black;
+        }
         EditorSceneManager.SaveScene(bootstrap);
 
         // ---- اتاق: HUD ----

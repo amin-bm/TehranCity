@@ -10,7 +10,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float walkSpeed = 3f;
     [SerializeField] private float rotationSmooth = 12f;
     [SerializeField] private float gravity = -20f;
-
+    [HideInInspector] public bool inputLocked;
     private CharacterController _controller;
     private TehranCityInput _input;
     private float _vy;
@@ -33,7 +33,7 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
-        MoveInput = _input.Gameplay.Move.ReadValue<Vector2>();
+        MoveInput = inputLocked ? Vector2.zero : _input.Gameplay.Move.ReadValue<Vector2>();
         if (MoveInput.sqrMagnitude > 1f) MoveInput = MoveInput.normalized;
 
         Vector3 dir = CameraRelativeDir(MoveInput);
