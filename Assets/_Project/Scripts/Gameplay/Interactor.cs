@@ -15,6 +15,7 @@ public class Interactor : MonoBehaviour
     private TehranCityInput _input;
     private InteractionUI _ui;
     private float _nextScan;
+    private void OnDestroy() => _input.Gameplay.Disable();
 
     private void Awake()
     {

@@ -10,7 +10,7 @@ public class SimpleInteractable : MonoBehaviour, IInteractable
 
     public string Prompt => prompt;
     public bool CanInteract => true;
-
+    public void Configure(string p, string t) { prompt = p; toastMessage = t; }
     public void OnInteract(GameObject interactor)
     {
         if (!string.IsNullOrEmpty(toastMessage))

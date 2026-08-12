@@ -23,6 +23,12 @@ public class PlayerController : MonoBehaviour
     {
         _controller = GetComponent<CharacterController>();
         _input = new TehranCityInput();
+        if (!string.IsNullOrEmpty(SceneTransition.PendingSpawn))
+        {
+            var sp = GameObject.Find(SceneTransition.PendingSpawn);
+            if (sp != null) transform.position = sp.transform.position + Vector3.up * 1f;
+            SceneTransition.PendingSpawn = "";
+        }
     }
 
     private void OnEnable() => _input.Gameplay.Enable();

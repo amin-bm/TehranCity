@@ -21,6 +21,8 @@ public class PhoneController : MonoBehaviour
 
     public bool IsOpen => _open;
 
+    private void OnDestroy() => _input.Gameplay.Disable();
+
     private void Awake()
     {
         _input = new TehranCityInput();
@@ -44,6 +46,8 @@ public class PhoneController : MonoBehaviour
 
     public void Toggle()
     {
+        if (_player == null) _player = FindFirstObjectByType<PlayerController>();
+
         _open = !_open;
         phonePanel.SetActive(_open);
         Debug.Log($"[Phone] Open={_open}");

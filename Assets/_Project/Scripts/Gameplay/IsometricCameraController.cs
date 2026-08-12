@@ -28,6 +28,8 @@ public class IsometricCameraController : MonoBehaviour
     private float _distance = 10f;
     private float _yaw = 0f;
 
+    private void OnDestroy() => _input.Gameplay.Disable();
+
     private void Awake()
     {
         _follow = GetComponent<CinemachineFollow>();
@@ -38,6 +40,8 @@ public class IsometricCameraController : MonoBehaviour
 
     private void Update()
     {
+        if (player == null) player = GameObject.FindWithTag("Player")?.transform;
+
         // Pivot فقط موقعیت را دنبال می‌کند (بدون چرخش کاراکتر)
         if (player != null && pivot != null)
             pivot.position = player.position + Vector3.up * 1f;
