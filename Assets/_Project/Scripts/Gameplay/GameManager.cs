@@ -11,6 +11,19 @@ public class GameManager : MonoBehaviour
 
     private void Awake()
     {
+        if (FindFirstObjectByType<ClipModeDirector>() == null)
+        {
+            var cm = new GameObject("ClipModeDirector");
+            cm.AddComponent<ClipModeDirector>();
+            DontDestroyOnLoad(cm);
+        }
+        if (FindFirstObjectByType<PauseDirector>() == null)
+        {
+            var pz = new GameObject("PauseDirector");
+            pz.AddComponent<PauseDirector>();
+            DontDestroyOnLoad(pz);
+        }
+
         if (FindFirstObjectByType<GameManager>() != this)
         {
             Destroy(gameObject);

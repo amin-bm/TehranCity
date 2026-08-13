@@ -21,7 +21,8 @@ public class Interactor : MonoBehaviour
     {
         _input = new TehranCityInput();
         _input.Gameplay.Enable();
-        _ui = Object.FindFirstObjectByType<InteractionUI>();
+        // Include: حتی اگر UI_Canvas با Clip Mode خاموش باشد، کامپوننت پیدا شود
+        _ui = Object.FindFirstObjectByType<InteractionUI>(FindObjectsInactive.Include);
         if (_ui == null)
         {
             Debug.LogWarning("[Interactor] InteractionUI پیدا نشد! (Setup 8 را اجرا کرده‌ای؟)");
@@ -51,6 +52,10 @@ public class Interactor : MonoBehaviour
 
     private void Scan()
     {
+        // اگر UI هنگام Awake غیرفعال بوده (مثلاً Clip Mode)، بعداً دوباره جستجو کن
+        if (_ui == null)
+            _ui = Object.FindFirstObjectByType<InteractionUI>(FindObjectsInactive.Include);
+
         int count = Physics.OverlapSphereNonAlloc(transform.position + Vector3.up * 0.2f, radius, _buffer);
 
         _candidates.Clear();

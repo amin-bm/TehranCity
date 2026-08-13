@@ -42,13 +42,12 @@ public class EmployerDialogueController : MonoBehaviour, IInteractable
 
         if (ServiceBridge.GetFlag(GameFlags.JobAccepted))
         {
-            if (shiftController != null && !shiftController.IsRunning &&
-                !ServiceBridge.GetFlag(GameFlags.FirstShiftCompleted))
+            // شیفت تکرارپذیر است (حلقه‌ی پس‌انداز ۱۵م)؛ فقط حین اجرای شیفت بسته است
+            if (shiftController != null && !shiftController.IsRunning)
             {
                 ShowShiftIntro(true);
                 return;
             }
-
             var speaker = dialogue != null ? dialogue.employerName : "کارفرما";
             DialogueUI.Instance.ShowLine(speaker, shortLineAfterJob, HideCamera);
             return;
@@ -84,13 +83,14 @@ public class EmployerDialogueController : MonoBehaviour, IInteractable
             Debug.LogWarning("[Shift] ShiftController وصل نیست! منوی «TehranCity/Setup/13) Shift Minigame + Food Shop» را اجرا کن.");
             return;
         }
-
-        if (shiftController.IsRunning || ServiceBridge.GetFlag(GameFlags.FirstShiftCompleted))
-            return;
+        if (shiftController.IsRunning) return;
 
         var speaker = dialogue != null ? dialogue.employerName : "کارفرما";
-        DialogueUI.Instance.ShowLine(speaker,
-            "خب، وقت شیفته. حواست به صندوق، قفسه و مشتری‌ها باشه.",
+        var line = ServiceBridge.GetFlag(GameFlags.FirstShiftCompleted)
+            ? "برو سر کارت. هر وقت آماده بودی، شیفت بعدی رو شروع کن."
+            : "خب، وقت شیفته. حواست به صندوق، قفسه و مشتری‌ها باشه.";
+
+        DialogueUI.Instance.ShowLine(speaker, line,
             () =>
             {
                 if (hideCameraOnClose) HideCamera();
