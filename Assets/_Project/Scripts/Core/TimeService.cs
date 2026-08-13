@@ -10,6 +10,9 @@ public interface ITimeService
     TimeMode Mode { get; set; }
     /// <summary>پیشروی شبیه‌سازی؛ مقدار GameMinute پیشرفته را برمی‌گرداند.</summary>
     float Tick(float realDeltaSeconds);
+
+    /// <summary>پیشروی دستی زمان (برای شیفت Scripted).</summary>
+    void AdvanceMinutes(int count);
 }
 
 public class TimeService : ITimeService
@@ -60,5 +63,11 @@ public class TimeService : ITimeService
             }
             _bus.Publish(new HourChangedEvent { Day = Day, Hour = Hour, Minute = Minute });
         }
+    }
+
+    public void AdvanceMinutes(int count)
+    {
+        for (int i = 0; i < count; i++)
+            AdvanceMinute();
     }
 }

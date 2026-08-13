@@ -8,8 +8,9 @@ public class SceneDoor : MonoBehaviour, IInteractable
     public string spawnPointName = "";
 
     public string Prompt => prompt;
-    public bool CanInteract => true;
-
+    
+    public bool locked;
+    public bool CanInteract => !locked;
     public void OnInteract(GameObject interactor)
     {
         Debug.Log($"[Door] Loading '{targetScene}' spawn='{spawnPointName}'");

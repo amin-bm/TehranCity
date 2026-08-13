@@ -486,6 +486,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1904183606}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &511447765
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 511447766}
+  m_Layer: 0
+  m_Name: CustomerSpot
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &511447766
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 511447765}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 2.5, y: 0, z: 1.5}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &545281741
 GameObject:
   m_ObjectHideFlags: 0
@@ -498,6 +529,7 @@ GameObject:
   - component: {fileID: 545281745}
   - component: {fileID: 545281744}
   - component: {fileID: 545281743}
+  - component: {fileID: 545281746}
   m_Layer: 0
   m_Name: Counter
   m_TagString: Untagged
@@ -598,6 +630,21 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 545281741}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &545281746
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 545281741}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 27de2e53db5c79e469b038a15ae35812, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ShiftStation
+  kind: 0
+  promptText: "\u0635\u0646\u062F\u0648\u0642: \u062B\u0628\u062A \u0641\u0631\u0648\u0634"
+  active: 0
 --- !u!1 &686009793
 GameObject:
   m_ObjectHideFlags: 0
@@ -982,6 +1029,56 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1152124884}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &1155932470
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1155932472}
+  - component: {fileID: 1155932471}
+  m_Layer: 0
+  m_Name: ShiftRoot
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1155932471
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1155932470}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 776aa0637ed43534a94a4275016a5df6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ShiftController
+  stationRegister: {fileID: 545281746}
+  stationShelf: {fileID: 1710479701}
+  customerSpot: {fileID: 511447766}
+  door: {fileID: 2130440363}
+  salary: 600000
+  shiftDuration: 240
+--- !u!4 &1155932472
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1155932470}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1169344077
 GameObject:
   m_ObjectHideFlags: 0
@@ -1358,6 +1455,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EmployerDialogueController
   dialogue: {fileID: 11400000, guid: c1c030942e339a6478d042035220fa9d, type: 2}
   dialogueCamera: {fileID: 1034572934}
+  shiftController: {fileID: 1155932471}
   prompt: "\u0635\u062D\u0628\u062A \u0628\u0627 \u06A9\u0627\u0631\u0641\u0631\u0645\u0627"
   shortLineAfterJob: "\u062E\u0648\u0628\u0647\u060C \u0628\u0631\u0648 \u0633\u0631
     \u06A9\u0627\u0631\u062A. \u0645\u0634\u062A\u0631\u06CC\u200C\u0647\u0627 \u0631\u0648
@@ -1693,6 +1791,7 @@ GameObject:
   - component: {fileID: 1710479700}
   - component: {fileID: 1710479699}
   - component: {fileID: 1710479698}
+  - component: {fileID: 1710479701}
   m_Layer: 0
   m_Name: Shelf_Left
   m_TagString: Untagged
@@ -1793,6 +1892,21 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1710479696}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &1710479701
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1710479696}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 27de2e53db5c79e469b038a15ae35812, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ShiftStation
+  kind: 1
+  promptText: "\u0642\u0641\u0633\u0647: \u0686\u06CC\u062F\u0646 \u062C\u0646\u0633"
+  active: 0
 --- !u!1 &1824568219
 GameObject:
   m_ObjectHideFlags: 0
@@ -2337,6 +2451,7 @@ MonoBehaviour:
   prompt: "\u062E\u0631\u0648\u062C \u0628\u0647 \u06A9\u0648\u0686\u0647"
   targetScene: Prototype_Block01
   spawnPointName: Spawn_MobileShop_Outside
+  locked: 0
 --- !u!23 &2130440364
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -2422,3 +2537,5 @@ SceneRoots:
   - {fileID: 1620791746}
   - {fileID: 1824568224}
   - {fileID: 1904183606}
+  - {fileID: 511447766}
+  - {fileID: 1155932472}

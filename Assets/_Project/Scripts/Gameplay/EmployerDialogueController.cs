@@ -5,6 +5,7 @@ public class EmployerDialogueController : MonoBehaviour, IInteractable
 {
     public InterviewDialogueSO dialogue;
     public DialogueCameraController dialogueCamera;
+    public ShiftController shiftController;
 
     public string prompt = "صحبت با کارفرما";
     public string shortLineAfterJob = "خوبه، برو سر کارت. مشتری‌ها رو زیاد منتظر نذار.";
@@ -12,8 +13,8 @@ public class EmployerDialogueController : MonoBehaviour, IInteractable
     public string Prompt => prompt;
     public string InteractionPrompt => prompt;
     public string PromptText => prompt;
-    
-    public bool CanInteract => true;
+    public bool CanInteract => shiftController == null || !shiftController.IsRunning;
+
     private void Awake()
     {
         if (dialogue == null)
@@ -28,7 +29,6 @@ public class EmployerDialogueController : MonoBehaviour, IInteractable
     public void Interact(GameObject interactor) => StartInterview();
     public void Interact(Component interactor) => StartInterview();
     public void Interact(PlayerController interactor) => StartInterview();
-
     public void OnInteract() => StartInterview();
     public void OnInteract(GameObject interactor) => StartInterview();
 
@@ -42,6 +42,13 @@ public class EmployerDialogueController : MonoBehaviour, IInteractable
 
         if (ServiceBridge.GetFlag(GameFlags.JobAccepted))
         {
+            if (shiftController != null && !shiftController.IsRunning &&
+                !ServiceBridge.GetFlag(GameFlags.FirstShiftCompleted))
+            {
+                ShowShiftIntro(true);
+                return;
+            }
+
             var speaker = dialogue != null ? dialogue.employerName : "کارفرما";
             DialogueUI.Instance.ShowLine(speaker, shortLineAfterJob, HideCamera);
             return;
@@ -61,11 +68,35 @@ public class EmployerDialogueController : MonoBehaviour, IInteractable
         ServiceBridge.SetFlag(GameFlags.JobAccepted, true);
         ServiceLocator.EventBus.Publish(new JobAcceptedEvent());
         HideCamera();
+
+        // شروع خودکار شیفت، بلافاصله بعد از قبول کار
+        ShowShiftIntro(false);
     }
 
     private void OnRejectedClosed()
     {
         HideCamera();
+    }
+
+    private void ShowShiftIntro(bool hideCameraOnClose)
+    {
+        if (shiftController == null)
+        {
+            Debug.LogWarning("[Shift] ShiftController وصل نیست! منوی «TehranCity/Setup/13) Shift Minigame + Food Shop» را اجرا کن.");
+            return;
+        }
+
+        if (shiftController.IsRunning || ServiceBridge.GetFlag(GameFlags.FirstShiftCompleted))
+            return;
+
+        var speaker = dialogue != null ? dialogue.employerName : "کارفرما";
+        DialogueUI.Instance.ShowLine(speaker,
+            "خب، وقت شیفته. حواست به صندوق، قفسه و مشتری‌ها باشه.",
+            () =>
+            {
+                if (hideCameraOnClose) HideCamera();
+                shiftController.Begin();
+            });
     }
 
     private void HideCamera()
