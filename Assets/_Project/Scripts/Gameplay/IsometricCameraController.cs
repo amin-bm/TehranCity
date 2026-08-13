@@ -67,5 +67,28 @@ public class IsometricCameraController : MonoBehaviour
         float r = _distance * Mathf.Cos(pitch * Mathf.Deg2Rad);
         Vector3 offset = Quaternion.Euler(0f, _yaw, 0f) * new Vector3(0f, h, -r);
         _follow.FollowOffset = offset;
+
+        // هشدار desync: اگر pivot از بازیکن فاصله غیرعادی گرفت، یعنی زنجیره دوربین جایی قطع است
+        if (player != null && pivot != null &&
+            Vector3.Distance(pivot.position, player.position + Vector3.up) > 2f)
+        {
+            Debug.LogWarning($"[Camera] pivot desync! pivot={pivot.position} player={player.position}");
+        }
+    }
+
+    private void OnEnable()
+    {
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    private void OnDisable()
+    {
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
+    // با هر لود، رفرنس بازیکن 강제‌اً از نو پیدا شود (جلوگیری از رفرنس کهنه صحنه قبل)
+    private void OnSceneLoaded(UnityEngine.SceneManagement.Scene s, UnityEngine.SceneManagement.LoadSceneMode mode)
+    {
+        player = null;
     }
 }

@@ -22,8 +22,16 @@ public class Interactor : MonoBehaviour
         _input = new TehranCityInput();
         _input.Gameplay.Enable();
         _ui = Object.FindFirstObjectByType<InteractionUI>();
-        if (_ui == null) Debug.LogWarning("[Interactor] InteractionUI پیدا نشد! (Setup 8 را اجرا کرده‌ای؟)");
-        else Debug.Log("[Interactor] UI connected.");
+        if (_ui == null)
+        {
+            Debug.LogWarning("[Interactor] InteractionUI پیدا نشد! (Setup 8 را اجرا کرده‌ای؟)");
+        }
+        else
+        {
+            // UI ماندگار است؛ پرامپت صحنه قبلی را همان لحظه پاک کن
+            _ui.HidePrompt();
+            Debug.Log("[Interactor] UI connected.");
+        }
     }
 
     private void Update()
