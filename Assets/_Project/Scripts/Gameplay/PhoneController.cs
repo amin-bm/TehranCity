@@ -74,6 +74,7 @@ public class PhoneController : MonoBehaviour
             if (m != null && !string.IsNullOrEmpty(m.flagKey))
             {
                 ServiceLocator.Flags.Set(m.flagKey, true);
+                ServiceBridge.SetFlag(m.flagKey, true); // همگام‌سازی آینه ServiceBridge
                 Debug.Log($"[Phone] flag '{m.flagKey}' = true");
             }
     }

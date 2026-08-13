@@ -66,10 +66,9 @@ public class EmployerDialogueController : MonoBehaviour, IInteractable
     private void OnAcceptedClosed()
     {
         ServiceBridge.SetFlag(GameFlags.JobAccepted, true);
+        Debug.Log($"[Flags] jobAccepted => {ServiceBridge.GetFlag(GameFlags.JobAccepted)}");
         ServiceLocator.EventBus.Publish(new JobAcceptedEvent());
         HideCamera();
-
-        // شروع خودکار شیفت، بلافاصله بعد از قبول کار
         ShowShiftIntro(false);
     }
 

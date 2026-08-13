@@ -5,34 +5,126 @@ using System.Reflection;
 using UnityEngine;
 
 /// <summary>
-/// پل ارتباطی runtime با سرویس‌ها (Flags / Time / Economy) بدون وابستگی کامپایل مستقیم.
-/// نسخه تایپ‌محور: هر پراپرتی/فیلد/متدی که enum زمان بپذیرد پیدا و استفاده می‌شود.
+/// پل ارتباطی runtime با سرویس‌ها.
+/// Flags: سیگنیچر-محور (هر متد (string)->bool یا (string,bool)->void یا ایندکسر رشته‌ای).
+/// Economy: تایپ‌دار (ServiceLocator.Economy) + GetBalance رفلکسیونی.
+/// Time: تایپ‌محور روی enum.
 /// </summary>
 public static class ServiceBridge
 {
     private static readonly Stack<object> _timeModeStack = new Stack<object>();
     private static readonly Dictionary<string, Type> _typeCache = new Dictionary<string, Type>();
-
     private static bool _warnedFlags;
     private static bool _warnedTime;
     private static bool _warnedEconomy;
+    private static bool _warnedNeeds;
+    private static readonly Dictionary<string, bool> _flagMirror = new Dictionary<string, bool>();
 
-    /* ================= Flags ================= */
+    /* ================= Flags (سیگنیچر-محور) ================= */
 
     public static bool GetFlag(string key)
     {
         var svc = FindService("FlagsService", "IFlagsService", "GameFlagsService");
-        if (svc == null) { WarnFlags(); return false; }
-        var result = Invoke(svc, new[] { "GetFlag", "Get", "GetBool", "HasFlag", "Has" }, key);
-        return result is bool b && b;
+        if (svc != null)
+        {
+            var type = svc.GetType();
+
+            var named = Invoke(svc, new[] { "GetFlag", "Get", "GetBool", "HasFlag", "Has", "IsSet", "Contains", "GetValue", "Read" }, key);
+            if (named is bool nb) { _flagMirror[key] = nb; return nb; }
+
+            foreach (var m in type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+            {
+                var ps = m.GetParameters();
+                if (ps.Length != 1 || ps[0].ParameterType != typeof(string) || m.IsGenericMethod) continue;
+                try
+                {
+                    var r = m.Invoke(svc, new object[] { key });
+                    if (r is bool b) { _flagMirror[key] = b; return b; }
+                    if (r is int i) { var v = i != 0; _flagMirror[key] = v; return v; }
+                }
+                catch { }
+            }
+
+            foreach (var p in type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+            {
+                var ix = p.GetIndexParameters();
+                if (ix.Length == 1 && ix[0].ParameterType == typeof(string))
+                {
+                    try { var r = p.GetValue(svc, new object[] { key }); if (r is bool b2) { _flagMirror[key] = b2; return b2; } } catch { }
+                }
+                else if (ix.Length == 0 && p.PropertyType == typeof(bool) &&
+                         string.Equals(p.Name, key, StringComparison.OrdinalIgnoreCase))
+                {
+                    try { var v = (bool)p.GetValue(svc); _flagMirror[key] = v; return v; } catch { }
+                }
+            }
+
+            foreach (var f in type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+            {
+                if (f.FieldType == typeof(bool) && string.Equals(f.Name, key, StringComparison.OrdinalIgnoreCase))
+                {
+                    try { var v = (bool)f.GetValue(svc); _flagMirror[key] = v; return v; } catch { }
+                }
+                if (f.FieldType.IsGenericType && f.FieldType.GetGenericTypeDefinition() == typeof(Dictionary<,>))
+                {
+                    var ga = f.FieldType.GetGenericArguments();
+                    if (ga[0] == typeof(string) && ga[1] == typeof(bool))
+                    {
+                        try
+                        {
+                            var dict = (Dictionary<string, bool>)f.GetValue(svc);
+                            if (dict != null && dict.TryGetValue(key, out var dv)) { _flagMirror[key] = dv; return dv; }
+                        }
+                        catch { }
+                    }
+                }
+            }
+        }
+
+        // سنگر آخر: آینه داخلی (تضمین سازگاری Set/Get در سشن و Save/Load)
+        return _flagMirror.TryGetValue(key, out var mv) && mv;
     }
 
     public static void SetFlag(string key, bool value)
     {
+        _flagMirror[key] = value; // همیشه
+
         var svc = FindService("FlagsService", "IFlagsService", "GameFlagsService");
-        if (svc == null) { WarnFlags(); return; }
-        if (!TryInvoke(svc, new[] { "SetFlag", "Set", "SetBool", "SetValue", "AddFlag" }, key, value))
-            WarnFlags();
+        if (svc == null) return;
+        if (TryInvoke(svc, new[] { "SetFlag", "Set", "SetBool", "SetValue", "AddFlag" }, key, value)) return;
+
+        var type = svc.GetType();
+        foreach (var m in type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+        {
+            var ps = m.GetParameters();
+            if (ps.Length != 2 || ps[0].ParameterType != typeof(string) ||
+                ps[1].ParameterType != typeof(bool) || m.ReturnType != typeof(void) || m.IsGenericMethod) continue;
+            try { m.Invoke(svc, new object[] { key, value }); return; } catch { }
+        }
+
+        foreach (var p in type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+        {
+            var ix = p.GetIndexParameters();
+            if (ix.Length == 1 && ix[0].ParameterType == typeof(string) && p.CanWrite && p.PropertyType == typeof(bool))
+            { try { p.SetValue(svc, value, new object[] { key }); return; } catch { } }
+            if (ix.Length == 0 && p.CanWrite && p.PropertyType == typeof(bool) &&
+                string.Equals(p.Name, key, StringComparison.OrdinalIgnoreCase))
+            { try { p.SetValue(svc, value); return; } catch { } }
+        }
+
+        foreach (var f in type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+        {
+            if (f.FieldType == typeof(bool) && string.Equals(f.Name, key, StringComparison.OrdinalIgnoreCase))
+            { try { f.SetValue(svc, value); return; } catch { } }
+            if (f.FieldType.IsGenericType && f.FieldType.GetGenericTypeDefinition() == typeof(Dictionary<,>))
+            {
+                var ga = f.FieldType.GetGenericArguments();
+                if (ga[0] == typeof(string) && ga[1] == typeof(bool))
+                {
+                    try { var dict = (Dictionary<string, bool>)f.GetValue(svc); if (dict != null) { dict[key] = value; return; } } catch { }
+                }
+            }
+        }
     }
 
     /* ================= TimeMode ================= */
@@ -62,16 +154,8 @@ public static class ServiceBridge
         ServiceLocator.Ensure();
         var eco = ServiceLocator.Economy;
         if (eco == null) { WarnEconomy(); return false; }
-        try
-        {
-            eco.AddMoney(amount, reason);
-            return true;
-        }
-        catch (Exception e)
-        {
-            Debug.LogWarning($"[TehranCity] AddMoney({amount}) threw: {e}");
-            return false;
-        }
+        try { eco.AddMoney(amount, reason); return true; }
+        catch (Exception e) { Debug.LogWarning($"[TehranCity] AddMoney({amount}) threw: {e}"); return false; }
     }
 
     public static bool TrySpend(long amount, string reason = "Purchase")
@@ -79,15 +163,59 @@ public static class ServiceBridge
         ServiceLocator.Ensure();
         var eco = ServiceLocator.Economy;
         if (eco == null) { WarnEconomy(); return false; }
-        try
+        try { return eco.TrySpend(amount, reason); }
+        catch (Exception e) { Debug.LogWarning($"[TehranCity] TrySpend({amount}) threw: {e}"); return false; }
+    }
+
+    public static long GetBalance()
+    {
+        var svc = FindService("EconomyService", "IEconomyService");
+        if (svc == null) { WarnEconomy(); return 0L; }
+        var type = svc.GetType();
+
+        foreach (var n in new[] { "GetBalance", "GetCash", "ReadBalance" })
         {
-            return eco.TrySpend(amount, reason);
+            var m = type.GetMethod(n, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
+            if (m != null) { try { var r = m.Invoke(svc, null); if (r is long l) return l; } catch { } }
         }
-        catch (Exception e)
+        foreach (var n in new[] { "Balance", "Cash", "CurrentBalance", "Money" })
         {
-            Debug.LogWarning($"[TehranCity] TrySpend({amount}) threw: {e}");
-            return false;
+            var p = type.GetProperty(n, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (p != null) { try { var r = p.GetValue(svc); if (r is long l) return l; } catch { } }
         }
+        foreach (var n in new[] { "_balance", "balance", "_cash", "cash" })
+        {
+            var f = type.GetField(n, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (f != null) { try { var r = f.GetValue(svc); if (r is long l) return l; } catch { } }
+        }
+
+        Debug.LogWarning("[TehranCity] ServiceBridge: balance read failed. (EconomyService.cs را بفرست.)");
+        return 0L;
+    }
+
+    /* ================= Needs ================= */
+
+    public static void AddNeed(string needName, float delta)
+    {
+        var svc = FindService("NeedsService", "INeedsService");
+        if (svc == null) { WarnNeeds(); return; }
+        var type = svc.GetType();
+
+        var p = type.GetProperty(needName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        if (p != null && p.PropertyType == typeof(float))
+        {
+            try { float cur = (float)p.GetValue(svc); p.SetValue(svc, Mathf.Clamp(cur + delta, 0f, 100f)); return; } catch { }
+        }
+
+        string camel = char.ToLower(needName[0]) + needName.Substring(1);
+        foreach (var fn in new[] { needName, "_" + camel, camel })
+        {
+            var f = type.GetField(fn, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (f == null || f.FieldType != typeof(float)) continue;
+            try { float cur = (float)f.GetValue(svc); f.SetValue(svc, Mathf.Clamp(cur + delta, 0f, 100f)); return; } catch { }
+        }
+
+        WarnNeeds();
     }
 
     /* ================= یافتن سرویس ================= */
@@ -98,7 +226,6 @@ public static class ServiceBridge
         if (locatorType != null)
         {
             TryStaticVoid(locatorType, "Ensure");
-
             foreach (var typeName in typeNames)
             {
                 var serviceType = FindType(typeName);
@@ -109,13 +236,11 @@ public static class ServiceBridge
                     if (!serviceType.IsAssignableFrom(prop.PropertyType)) continue;
                     try { var v = prop.GetValue(null); if (v != null) return v; } catch { }
                 }
-
                 foreach (var field in locatorType.GetFields(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic))
                 {
                     if (!serviceType.IsAssignableFrom(field.FieldType)) continue;
                     try { var v = field.GetValue(null); if (v != null) return v; } catch { }
                 }
-
                 foreach (var method in locatorType.GetMethods(BindingFlags.Public | BindingFlags.Static).Where(m => m.Name == "Get"))
                 {
                     try
@@ -125,8 +250,7 @@ public static class ServiceBridge
                             var result = method.MakeGenericMethod(serviceType).Invoke(null, null);
                             if (result != null) return result;
                         }
-                        else if (method.GetParameters().Length == 1 &&
-                                 method.GetParameters()[0].ParameterType == typeof(Type))
+                        else if (method.GetParameters().Length == 1 && method.GetParameters()[0].ParameterType == typeof(Type))
                         {
                             var result = method.Invoke(null, new object[] { serviceType });
                             if (result != null) return result;
@@ -144,30 +268,26 @@ public static class ServiceBridge
             var staticInstance = GetStaticInstance(serviceType);
             if (staticInstance != null) return staticInstance;
         }
-
         return null;
     }
 
-    /* ================= TimeMode: کشف تایپ‌محور ================= */
+    /* ================= TimeMode: تایپ‌محور ================= */
 
     private static object GetTimeModeValue(object svc)
     {
         if (svc == null) return null;
-
         foreach (var p in svc.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
         {
             if (!p.CanRead || p.GetIndexParameters().Length > 0 || !p.PropertyType.IsEnum) continue;
             if (!LooksTimeRelated(p.Name) && !LooksTimeRelated(p.PropertyType.Name)) continue;
             try { return p.GetValue(svc); } catch { }
         }
-
         foreach (var f in svc.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
         {
             if (!f.FieldType.IsEnum) continue;
             if (!LooksTimeRelated(f.Name) && !LooksTimeRelated(f.FieldType.Name)) continue;
             try { return f.GetValue(svc); } catch { }
         }
-
         return null;
     }
 
@@ -175,7 +295,6 @@ public static class ServiceBridge
     {
         var type = svc.GetType();
 
-        // 1) پراپرتی‌های enum قابل‌نوشتن (اول مرتبط‌ها، بعد همه)
         foreach (var pass in new[] { true, false })
         {
             foreach (var p in type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
@@ -188,7 +307,6 @@ public static class ServiceBridge
             }
         }
 
-        // 2) فیلدهای enum (شامل خصوصی‌ها)
         foreach (var pass in new[] { true, false })
         {
             foreach (var f in type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
@@ -201,7 +319,6 @@ public static class ServiceBridge
             }
         }
 
-        // 3) متدهای تک‌پارامتره enum/رشته
         foreach (var pass in new[] { true, false })
         {
             foreach (var m in type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
@@ -240,12 +357,10 @@ public static class ServiceBridge
             if (!p.CanWrite || p.GetIndexParameters().Length > 0) continue;
             try { if (p.PropertyType.IsInstanceOfType(modeValue)) { p.SetValue(svc, modeValue); return; } } catch { }
         }
-
         foreach (var f in type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
         {
             try { if (f.FieldType.IsInstanceOfType(modeValue)) { f.SetValue(svc, modeValue); return; } } catch { }
         }
-
         foreach (var m in type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
         {
             var ps = m.GetParameters();
@@ -266,10 +381,8 @@ public static class ServiceBridge
         WarnTime();
     }
 
-    private static bool LooksTimeRelated(string name)
-    {
-        return name.Contains("Time") || name.Contains("Mode") || name.Contains("State");
-    }
+    private static bool LooksTimeRelated(string name) =>
+        name.Contains("Time") || name.Contains("Mode") || name.Contains("State");
 
     private static object SafeParseEnum(Type enumType, string value)
     {
@@ -311,27 +424,21 @@ public static class ServiceBridge
                         && m.GetParameters().Length == argCount && !m.IsGenericMethod);
     }
 
-
     private static object[] ConvertArgs(MethodInfo method, object[] args)
     {
         var parameters = method.GetParameters();
         if (parameters.Length != args.Length) return null;
-
         var converted = new object[args.Length];
         for (int i = 0; i < parameters.Length; i++)
         {
             var targetType = parameters[i].ParameterType;
             var arg = args[i];
-
             if (arg == null)
             {
                 if (targetType.IsValueType && Nullable.GetUnderlyingType(targetType) == null) return null;
-                converted[i] = null;
-                continue;
+                converted[i] = null; continue;
             }
-
             if (targetType.IsInstanceOfType(arg)) { converted[i] = arg; continue; }
-
             if (arg is string s)
             {
                 if (targetType.IsEnum)
@@ -345,10 +452,8 @@ public static class ServiceBridge
                     return null;
                 }
             }
-
             if (targetType == typeof(string)) { converted[i] = arg.ToString(); continue; }
             if (targetType == typeof(object)) { converted[i] = arg; continue; }
-
             try { converted[i] = Convert.ChangeType(arg, targetType); }
             catch { return null; }
         }
@@ -360,7 +465,6 @@ public static class ServiceBridge
     private static Type FindType(string name)
     {
         if (_typeCache.TryGetValue(name, out var cached)) return cached;
-
         foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
         {
             try
@@ -375,7 +479,6 @@ public static class ServiceBridge
             }
             catch { }
         }
-
         _typeCache[name] = null;
         return null;
     }
@@ -385,21 +488,13 @@ public static class ServiceBridge
         foreach (var propertyName in new[] { "Instance", "Current", "Main", "Service" })
         {
             var prop = type.GetProperty(propertyName, BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
-            if (prop != null)
-            {
-                try { var value = prop.GetValue(null); if (value != null) return value; } catch { }
-            }
+            if (prop != null) { try { var value = prop.GetValue(null); if (value != null) return value; } catch { } }
         }
-
         foreach (var fieldName in new[] { "instance", "_instance", "current", "_current" })
         {
             var field = type.GetField(fieldName, BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
-            if (field != null)
-            {
-                try { var value = field.GetValue(null); if (value != null) return value; } catch { }
-            }
+            if (field != null) { try { var value = field.GetValue(null); if (value != null) return value; } catch { } }
         }
-
         return null;
     }
 
@@ -408,57 +503,9 @@ public static class ServiceBridge
         try
         {
             var method = type.GetMethod(methodName, BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
-            if (method != null && method.GetParameters().Length == 0)
-                method.Invoke(null, null);
+            if (method != null && method.GetParameters().Length == 0) method.Invoke(null, null);
         }
         catch { }
-    }
-
-    /* ================= Needs ================= */
-
-    public static void AddNeed(string needName, float delta)
-    {
-        var svc = FindService("NeedsService", "INeedsService");
-        if (svc == null) { WarnNeeds(); return; }
-        var type = svc.GetType();
-
-        // 1) پراپرتی float هم‌نام (Energy/Stress/Hunger/Social)
-        var p = type.GetProperty(needName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-        if (p != null && p.PropertyType == typeof(float))
-        {
-            try
-            {
-                float cur = (float)p.GetValue(svc);
-                p.SetValue(svc, Mathf.Clamp(cur + delta, 0f, 100f));
-                return;
-            }
-            catch { }
-        }
-
-        // 2) فیلد backing با نام‌های رایج (Hunger / _hunger / hunger)
-        string camel = char.ToLower(needName[0]) + needName.Substring(1);
-        foreach (var fieldName in new[] { needName, "_" + camel, camel })
-        {
-            var f = type.GetField(fieldName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            if (f == null || f.FieldType != typeof(float)) continue;
-            try
-            {
-                float cur = (float)f.GetValue(svc);
-                f.SetValue(svc, Mathf.Clamp(cur + delta, 0f, 100f));
-                return;
-            }
-            catch { }
-        }
-
-        WarnNeeds();
-    }
-
-    private static bool _warnedNeeds;
-    private static void WarnNeeds()
-    {
-        if (_warnedNeeds) return;
-        Debug.LogWarning("[TehranCity] ServiceBridge: NeedsService API not found; need change not applied. (فایل NeedsService.cs را بفرست تا با متد خود سرویس و رویداد OnNeedsChanged وصل کنم.)");
-        _warnedNeeds = true;
     }
 
     /* ================= هشدارها ================= */
@@ -466,21 +513,25 @@ public static class ServiceBridge
     private static void WarnFlags()
     {
         if (_warnedFlags) return;
-        Debug.LogWarning("[TehranCity] ServiceBridge: FlagsService API not found. jobAccepted flag may not be set.");
+        Debug.LogWarning("[TehranCity] ServiceBridge: FlagsService getter/setter not found. (FlagsService.cs را بفرست.)");
         _warnedFlags = true;
     }
-
     private static void WarnTime()
     {
         if (_warnedTime) return;
-        Debug.LogWarning("[TehranCity] ServiceBridge: TimeService API not found. Dialogue TimeMode may not change.");
+        Debug.LogWarning("[TehranCity] ServiceBridge: TimeService API not found.");
         _warnedTime = true;
     }
-
     private static void WarnEconomy()
     {
         if (_warnedEconomy) return;
         Debug.LogWarning("[TehranCity] ServiceBridge: EconomyService API not found.");
         _warnedEconomy = true;
+    }
+    private static void WarnNeeds()
+    {
+        if (_warnedNeeds) return;
+        Debug.LogWarning("[TehranCity] ServiceBridge: NeedsService API not found.");
+        _warnedNeeds = true;
     }
 }

@@ -1659,7 +1659,7 @@ GameObject:
   - component: {fileID: 1191451625}
   - component: {fileID: 1191451624}
   - component: {fileID: 1191451623}
-  - component: {fileID: 1191451622}
+  - component: {fileID: 1191451626}
   m_Layer: 0
   m_Name: Door_TinyShop
   m_TagString: Untagged
@@ -1682,23 +1682,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1981074059}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1191451622
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1191451620}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0430ef0995b4ae64bb0b55a0d6429f10, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SimpleInteractable
-  prompt: "\u0645\u063A\u0627\u0632\u0647 \u062E\u06CC\u0644\u06CC \u06A9\u0648\u0686\u06A9"
-  toastMessage: "\u0628\u0631\u0627\u06CC \u0627\u062C\u0627\u0631\u0647 \u0627\u06CC\u0646
-    \u0645\u063A\u0627\u0632\u0647 \u0628\u0647 \u067E\u0627\u0646\u0632\u062F\u0647
-    \u0645\u06CC\u0644\u06CC\u0648\u0646 \u062A\u0648\u0645\u0627\u0646 \u067E\u0633\u200C\u0627\u0646\u062F\u0627\u0632
-    \u0646\u06CC\u0627\u0632 \u062F\u0627\u0631\u06CC."
 --- !u!23 &1191451623
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -1777,6 +1760,19 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1191451620}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &1191451626
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1191451620}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1b53cc4032b8a0942ac6e747506c8019, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TinyShopHook
+  targetPrice: 15000000
 --- !u!1 &1217915706
 GameObject:
   m_ObjectHideFlags: 0

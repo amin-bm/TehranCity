@@ -18,13 +18,21 @@ public class GameManager : MonoBehaviour
         }
         DontDestroyOnLoad(gameObject);
         ServiceLocator.Ensure();
+        if (FindFirstObjectByType<SaveDirector>() == null)
+        {
+            var sd = new GameObject("SaveDirector");
+            sd.AddComponent<SaveDirector>();
+            DontDestroyOnLoad(sd);
+        }
         ServiceLocator.EventBus.Publish(new GameStartedEvent());
         Debug.Log($"[GameManager] Awake in '{SceneManager.GetActiveScene().name}' | nextScene='{nextScene}'");
     }
 
     private void Start()
     {
-        // لود در Start تا Awake همه آبجکت‌های صحنه فعلی تمام شده باشد
+        // اگر Save وجود دارد، قبل از لود صحنه بعدی اعمال شود
+        ServiceLocator.Save.TryLoad();
+
         if (!string.IsNullOrEmpty(nextScene) &&
             SceneManager.GetActiveScene().name != nextScene)
         {

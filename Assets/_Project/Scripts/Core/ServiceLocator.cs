@@ -7,6 +7,7 @@ public static class ServiceLocator
     public static INeedsService Needs { get; private set; }
     public static bool IsReady { get; private set; }
     public static IFlagsService Flags { get; private set; }
+    public static ISaveService Save { get; private set; }
 
     public static void Ensure()
     {
@@ -20,6 +21,7 @@ public static class ServiceLocator
         Economy = economy;
         Needs = needs;
         Flags = new FlagsService();
+        Save = new SaveService();
         IsReady = true;
     }
 
@@ -28,5 +30,6 @@ public static class ServiceLocator
         EventBus = null; TimeService = null; Economy = null; Needs = null;
         IsReady = false;
         Flags = null;
+        Save = null;
     }
 }
