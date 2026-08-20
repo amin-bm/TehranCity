@@ -64,7 +64,6 @@ public class ShiftHUD : MonoBehaviour
         rt.anchoredPosition = new Vector2(0f, -80f); // ۸۰ پیکسل پایین‌تر از لبه‌ی بالا
         rt.sizeDelta = new Vector2(1600f, 60f);
 
-        Debug.Log($"[ShiftHUD] Awake | host={(host != null ? "UI_Canvas" : "own-canvas")} | font={(_text.font != null ? _text.font.name : "NULL")}");
     }
 
     public void SetText(string s)

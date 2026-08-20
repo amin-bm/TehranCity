@@ -28,18 +28,13 @@ public class PhoneController : MonoBehaviour
         _input = new TehranCityInput();
         _input.Gameplay.Enable();
         _player = FindFirstObjectByType<PlayerController>();
-        if (phonePanel == null) Debug.LogError("[Phone] phonePanel assign نشده!");
-        for (int i = 0; i < messages.Count; i++)
-            if (messages[i] == null) Debug.LogError($"[Phone] messages[{i}] NULL است!");
         phonePanel.SetActive(false);
-        Debug.Log($"[Phone] Awake | panel={phonePanel != null} | player={_player != null} | messages={messages.Count}");
     }
 
     private void Update()
     {
         if (_input.Gameplay.Phone.triggered)
         {
-            Debug.Log("[Phone] Tab pressed -> Toggle");
             Toggle();
         }
     }
@@ -50,7 +45,6 @@ public class PhoneController : MonoBehaviour
 
         _open = !_open;
         phonePanel.SetActive(_open);
-        Debug.Log($"[Phone] Open={_open}");
 
         if (_open)
         {
@@ -75,7 +69,6 @@ public class PhoneController : MonoBehaviour
             {
                 ServiceLocator.Flags.Set(m.flagKey, true);
                 ServiceBridge.SetFlag(m.flagKey, true); // همگام‌سازی آینه ServiceBridge
-                Debug.Log($"[Phone] flag '{m.flagKey}' = true");
             }
     }
 

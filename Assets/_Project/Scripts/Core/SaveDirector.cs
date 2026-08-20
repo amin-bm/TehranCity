@@ -12,7 +12,12 @@ public class SaveDirector : MonoBehaviour
     private int _lastDay;
     private bool _lastShift;
 
-    private void Update()
+    private bool _shiftInit;
+
+    
+    
+
+private void Update()
     {
         if (!ServiceLocator.IsReady) return;
 
@@ -27,6 +32,12 @@ public class SaveDirector : MonoBehaviour
                 SaveServiceGetNeed("Hunger"), SaveServiceGetNeed("Social"),
                 _lastDay, shopTarget);
             _lastDay = day;
+        }
+
+        if (!_shiftInit)
+        {
+            _shiftInit = true;
+            _lastShift = ServiceBridge.GetFlag("firstShiftCompleted");
         }
 
         bool shift = ServiceBridge.GetFlag("firstShiftCompleted");

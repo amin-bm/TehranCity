@@ -151,10 +151,8 @@ public class ShiftController : MonoBehaviour
 
         // پول فقط از EconomyService + رویداد فقط از EventBus
         ServiceBridge.SetFlag(GameFlags.FirstShiftCompleted, true);
-        Debug.Log($"[Flags] firstShiftCompleted => {ServiceBridge.GetFlag(GameFlags.FirstShiftCompleted)}");
 
         bool paid = ServiceBridge.AddMoney(salary);
-        Debug.Log($"[Shift] AddMoney({salary}) => {paid}");
         ServiceLocator.EventBus.Publish(new SalaryReceivedEvent { Amount = salary });
         Debug.Log($"[Shift] پایان شیفت (completed={completed}). حقوق {salary} واریز شد.");
 

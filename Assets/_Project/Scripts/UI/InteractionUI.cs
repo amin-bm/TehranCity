@@ -13,8 +13,7 @@ public class InteractionUI : MonoBehaviour
         if (promptText != null) promptText.alignment = TextAlignmentOptions.Right;
         if (toastText != null) toastText.alignment = TextAlignmentOptions.Right;
 
-        // لاگ تشخیص مسیر: هر دو باید RTLTextMeshPro باشند
-        Debug.Log($"[InteractionUI] promptText = {promptText.GetType().Name} | toastText = {toastText.GetType().Name}");
+
     }
 
     public void ShowPrompt(string prompt)

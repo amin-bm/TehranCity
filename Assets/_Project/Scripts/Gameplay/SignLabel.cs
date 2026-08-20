@@ -12,7 +12,6 @@ public class SignLabel : MonoBehaviour
         if (tmp != null)
         {
             tmp.text = text; // خام؛ بدون FaText
-            Debug.Log($"[Sign] '{name}' -> '{text}'");
         }
         else
         {

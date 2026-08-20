@@ -27,7 +27,6 @@ public class HUDController : MonoBehaviour
         bus.Subscribe<DayChangedEvent>(OnDay);
 
         RefreshMoney(); RefreshTime(); RefreshNeeds();
-        Debug.Log($"[HUD] Awake | GameManager={(FindFirstObjectByType<GameManager>() != null)} | font={moneyText.font.name}");
     }
 
     private void OnDestroy()

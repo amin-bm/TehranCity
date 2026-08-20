@@ -31,8 +31,6 @@ public class PlayerController : MonoBehaviour
 
     private void Awake()
     {
-        Debug.Log($"[Player] BUILD={BUILD_TAG} id={GetInstanceID()} scene='{gameObject.scene.name}'");
-
         _lockWarned = false;
         // خودتمیزی داده صحنه: Rigidbody/CapsuleCollider سرگردان حذف شود
         var rb = GetComponent<Rigidbody>();
@@ -55,7 +53,6 @@ public class PlayerController : MonoBehaviour
             else
                 Debug.LogWarning($"[Player] PendingSpawn '{spawnName}' پیدا نشد!");
 
-            Debug.Log($"[Player] Spawn => '{spawnName}' found={sp != null} pos={transform.position} id={GetInstanceID()}");
             SceneTransition.PendingSpawn = "";
 
             _intendedSpawn = transform.position;

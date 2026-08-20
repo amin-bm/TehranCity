@@ -91,3 +91,9 @@ Desktop.ini
 
 # --- Plastic SCM / Unity Version Control ---
 .plastic/
+
+# Unity Profiler captures (local diagnostics only)
+ProfilerCaptures/
+
+# Build outputs
+Builds/

@@ -31,7 +31,6 @@ public class Interactor : MonoBehaviour
         {
             // UI ماندگار است؛ پرامپت صحنه قبلی را همان لحظه پاک کن
             _ui.HidePrompt();
-            Debug.Log("[Interactor] UI connected.");
         }
     }
 
@@ -45,7 +44,6 @@ public class Interactor : MonoBehaviour
 
         if (_current != null && _input.Gameplay.Interact.triggered)
         {
-            Debug.Log($"[Interactor] E pressed -> {(_current as MonoBehaviour).name}");
             _current.OnInteract(gameObject);
         }
     }
@@ -81,9 +79,6 @@ public class Interactor : MonoBehaviour
                 if (_current != null) _ui.ShowPrompt(_current.Prompt);
                 else _ui.HidePrompt();
             }
-            Debug.Log(_current != null
-                ? $"[Interactor] Target: {(_current as MonoBehaviour).name}"
-                : "[Interactor] No target");
         }
     }
 }
