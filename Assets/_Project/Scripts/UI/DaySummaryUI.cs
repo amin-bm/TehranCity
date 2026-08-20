@@ -1,19 +1,27 @@
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
-/// <summary>خلاصه پایان روز — خط‌های عدددار با TMP + FaText.Fix (سطح ۲ قانون متن).</summary>
+/// <summary>
+/// خلاصه پایان روز — بدون نیاز به کلید: بعد از ~۵ ثانیه خودکار بسته می‌شود
+/// تا با تعامل تخت/E تداخل نکند؛ بستن دستی با E/Enter هم ممکن است.
+/// حین نمایش، Interactor و حرکت قفل‌اند تا همان E تخت را فعال نکند.
+/// </summary>
 public class DaySummaryUI : MonoBehaviour
 {
     private static DaySummaryUI _instance;
 
-    private Canvas _canvas;
     private GameObject _panel;
     private Transform _linesRoot;
     private TMP_FontAsset _font;
     private bool _open;
     private TimeMode _prevMode;
+    private float _openAt;
+    private float _autoCloseAt;
+    private PlayerController _player;
+    private readonly List<Behaviour> _disabled = new List<Behaviour>();
 
     public static void Show(long cash, float energy, float stress, float hunger, float social, int endedDay, long shopTarget)
     {
@@ -30,16 +38,16 @@ public class DaySummaryUI : MonoBehaviour
     {
         var canvasGO = new GameObject("SummaryCanvas", typeof(RectTransform));
         canvasGO.transform.SetParent(transform, false);
-        _canvas = canvasGO.AddComponent<Canvas>();
-        _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        _canvas.sortingOrder = 960;
+        var canvas = canvasGO.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 960;
         var scaler = canvasGO.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1920f, 1080f);
         canvasGO.AddComponent<GraphicRaycaster>();
 
         _panel = new GameObject("Panel", typeof(RectTransform), typeof(Image), typeof(VerticalLayoutGroup));
-        _panel.transform.SetParent(_canvas.transform, false);
+        _panel.transform.SetParent(canvasGO.transform, false);
         var rt = _panel.GetComponent<RectTransform>();
         rt.anchorMin = new Vector2(0.5f, 0.5f);
         rt.anchorMax = new Vector2(0.5f, 0.5f);
@@ -77,11 +85,15 @@ public class DaySummaryUI : MonoBehaviour
         AddLine("پول نقد: " + PersianFormat.Money(cash), 30, Color.white);
         AddLine(FaText.Fix($"انرژی {PersianFormat.FaDigits(((int)energy).ToString())} | گرسنگی {PersianFormat.FaDigits(((int)hunger).ToString())} | استرس {PersianFormat.FaDigits(((int)stress).ToString())} | اجتماعی {PersianFormat.FaDigits(((int)social).ToString())}"), 30, Color.white);
         AddLine($"هدف: پس‌انداز {PersianFormat.IntWords((int)(shopTarget / 1_000_000))} میلیون تومان برای مغازه خیلی کوچک", 28, new Color(0.7f, 0.9f, 1f));
-        AddLine("ادامه  [E]", 24, new Color(0.75f, 0.75f, 0.75f));
+        AddLine("این پیام خودکار بسته می‌شود؛ E/Enter هم می‌بندد", 22, new Color(0.75f, 0.75f, 0.75f));
 
         _panel.SetActive(true);
         _prevMode = ServiceLocator.TimeService.Mode;
-        ServiceLocator.TimeService.Mode = TimeMode.Phone; // Pause حین خلاصه
+        ServiceLocator.TimeService.Mode = TimeMode.Phone;
+        LockGameplay(true);
+
+        _openAt = Time.unscaledTime;
+        _autoCloseAt = _openAt + 5f;
     }
 
     private void Close()
@@ -90,14 +102,38 @@ public class DaySummaryUI : MonoBehaviour
         _open = false;
         _panel.SetActive(false);
         ServiceLocator.TimeService.Mode = _prevMode;
+        LockGameplay(false);
     }
 
     private void Update()
     {
         if (!_open) return;
-        var kb = Keyboard.current;
-        if (kb != null && (kb.eKey.wasPressedThisFrame || kb.enterKey.wasPressedThisFrame))
-            Close();
+        float t = Time.unscaledTime;
+        if (t >= _autoCloseAt) { Close(); return; }
+        if (t - _openAt > 0.5f)
+        {
+            var kb = Keyboard.current;
+            if (kb != null && (kb.eKey.wasPressedThisFrame || kb.enterKey.wasPressedThisFrame))
+                Close();
+        }
+    }
+
+    private void LockGameplay(bool lockOn)
+    {
+        if (lockOn)
+        {
+            _disabled.Clear();
+            foreach (var b in FindObjectsByType<Interactor>(FindObjectsSortMode.None))
+                if (b != null && b.enabled) { b.enabled = false; _disabled.Add(b); }
+            _player = FindFirstObjectByType<PlayerController>();
+            if (_player != null) _player.inputLocked = true;
+        }
+        else
+        {
+            foreach (var b in _disabled) if (b != null) b.enabled = true;
+            _disabled.Clear();
+            if (_player != null) _player.inputLocked = false;
+        }
     }
 
     private void AddLine(string text, int size, Color color)
@@ -117,10 +153,8 @@ public class DaySummaryUI : MonoBehaviour
     private static TMP_FontAsset ResolveFont()
     {
         var fonts = Resources.FindObjectsOfTypeAll<TMP_FontAsset>();
-        foreach (var f in fonts)
-            if (f != null && f.name.Contains("TMP_Tahoma_Persian")) return f;
-        foreach (var f in fonts)
-            if (f != null && f.name.Contains("Tahoma")) return f;
+        foreach (var f in fonts) if (f != null && f.name.Contains("TMP_Tahoma_Persian")) return f;
+        foreach (var f in fonts) if (f != null && f.name.Contains("Tahoma")) return f;
         return TMP_Settings.defaultFontAsset;
     }
 }

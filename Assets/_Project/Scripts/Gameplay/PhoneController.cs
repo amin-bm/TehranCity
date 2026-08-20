@@ -4,10 +4,13 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>گوشی ساده (Phase 1): باز/بسته با Tab، توقف زمان، نمایش پیام‌ها، ثبت flag.</summary>
+/// <summary>
+/// گوشی ساده: باز/بسته با Tab، توقف زمان، نمایش پیام‌ها (SO + runtime)،
+/// ثبت flag پیام‌های دیده‌شده + ردیابی پیام ندیده‌ی صاحب‌خانه (فشار استرس).
+/// نسخه نهایی: پیام‌های runtime روزانه + اسکرول + لاگ شناسه (تشخیص آبجکت تکراری).
+/// </summary>
 public class PhoneController : MonoBehaviour
 {
-    // public تا Setup مستقیم و بدون SerializedObject مقداردهی کند
     public GameObject phonePanel;
     public Transform messagesContainer;
     public List<PhoneMessageSO> messages = new();
@@ -19,6 +22,9 @@ public class PhoneController : MonoBehaviour
     private bool _open;
     private bool _built;
 
+    private readonly List<string[]> _runtime = new List<string[]>();
+    private bool _unseenLandlord;
+
     public bool IsOpen => _open;
 
     private void OnDestroy() => _input.Gameplay.Disable();
@@ -28,21 +34,22 @@ public class PhoneController : MonoBehaviour
         _input = new TehranCityInput();
         _input.Gameplay.Enable();
         _player = FindFirstObjectByType<PlayerController>();
+        if (phonePanel == null) Debug.LogError("[Phone] phonePanel assign نشده!");
+        for (int i = 0; i < messages.Count; i++)
+            if (messages[i] == null) Debug.LogError($"[Phone] messages[{i}] NULL است!");
         phonePanel.SetActive(false);
+        EnsureScroll();
     }
 
     private void Update()
     {
         if (_input.Gameplay.Phone.triggered)
-        {
             Toggle();
-        }
     }
 
     public void Toggle()
     {
         if (_player == null) _player = FindFirstObjectByType<PlayerController>();
-
         _open = !_open;
         phonePanel.SetActive(_open);
 
@@ -54,6 +61,7 @@ public class PhoneController : MonoBehaviour
             if (_player != null) _player.inputLocked = true;
             BuildMessages();
             MarkSeen();
+            _unseenLandlord = false; // دیدن گوشی = دیده شدن پیام صاحب‌خانه
         }
         else
         {
@@ -62,14 +70,48 @@ public class PhoneController : MonoBehaviour
         }
     }
 
+    /* ---------- پیام‌های runtime (صاحب‌خانه) ---------- */
+
+    public void AddRuntimeMessage(string sender, string body)
+    {
+        _runtime.Add(new[] { sender, body });
+        _unseenLandlord = true;
+        if (_built) AddEntry(sender, body);
+    }
+
+    public bool ConsumeUnseenLandlord()
+    {
+        var v = _unseenLandlord;
+        _unseenLandlord = false;
+        return v;
+    }
+
+    /// <summary>پیام runtime را به همه‌ی نمونه‌های فعال می‌فرستد (ایمن در برابر آبجکت تکراری).</summary>
+    public static void BroadcastRuntime(string sender, string body)
+    {
+        var all = FindObjectsByType<PhoneController>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        int n = 0;
+        foreach (var pc in all)
+            if (pc != null && pc.gameObject.activeInHierarchy) { pc.AddRuntimeMessage(sender, body); n++; }
+    }
+
+    /// <summary>پرچم ندیده از هر نمونه‌ی فعالی که باشد مصرف می‌شود.</summary>
+    public static bool ConsumeUnseenAny()
+    {
+        bool v = false;
+        foreach (var pc in FindObjectsByType<PhoneController>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            if (pc != null && pc.gameObject.activeInHierarchy)
+                v |= pc.ConsumeUnseenLandlord();
+        return v;
+    }
+
+    /* ---------- ساخت UI پیام‌ها ---------- */
+
     private void MarkSeen()
     {
         foreach (var m in messages)
             if (m != null && !string.IsNullOrEmpty(m.flagKey))
-            {
                 ServiceLocator.Flags.Set(m.flagKey, true);
-                ServiceBridge.SetFlag(m.flagKey, true); // همگام‌سازی آینه ServiceBridge
-            }
     }
 
     private void BuildMessages()
@@ -78,16 +120,21 @@ public class PhoneController : MonoBehaviour
         _built = true;
         foreach (var m in messages)
         {
-            if (m == null) { Debug.LogWarning("[Phone] پیام null رد شد."); continue; }
-
-            var entry = new GameObject("Msg_" + m.messageId);
-            entry.transform.SetParent(messagesContainer, false);
-            var v = entry.AddComponent<VerticalLayoutGroup>();
-            v.spacing = 6f;
-
-            MakeRtl("Sender", m.senderName, 30, new Color(1f, 0.85f, 0.3f), entry.transform);
-            MakeRtl("Body", m.body, 28, Color.white, entry.transform);
+            if (m == null) continue;
+            AddEntry(m.senderName, m.body);
         }
+        foreach (var r in _runtime)
+            AddEntry(r[0], r[1]);
+    }
+
+    private void AddEntry(string sender, string body)
+    {
+        var entry = new GameObject("Msg_" + sender);
+        entry.transform.SetParent(messagesContainer, false);
+        var v = entry.AddComponent<VerticalLayoutGroup>();
+        v.spacing = 6f;
+        MakeRtl("Sender", sender, 30, new Color(1f, 0.85f, 0.3f), entry.transform);
+        MakeRtl("Body", body, 28, Color.white, entry.transform);
     }
 
     private void MakeRtl(string name, string text, float size, Color color, Transform parent)
@@ -100,5 +147,46 @@ public class PhoneController : MonoBehaviour
         tmp.color = color;
         tmp.alignment = TextAlignmentOptions.Right;
         tmp.text = text;
+    }
+
+    /// <summary>اسکرول‌پذیر کردن لیست پیام‌ها تا پیام‌های روزهای بعد جا شوند.</summary>
+    private void EnsureScroll()
+    {
+        if (phonePanel == null || messagesContainer == null) return;
+        var panelRect = phonePanel.GetComponent<RectTransform>();
+        var contentRect = messagesContainer.GetComponent<RectTransform>();
+        if (panelRect == null || contentRect == null) return;
+        if (phonePanel.GetComponent<ScrollRect>() != null) return;
+
+        if (phonePanel.GetComponent<RectMask2D>() == null && phonePanel.GetComponent<Mask>() == null)
+            phonePanel.AddComponent<RectMask2D>();
+
+        contentRect.anchorMin = Vector2.zero;
+        contentRect.anchorMax = Vector2.one;
+        contentRect.offsetMin = Vector2.zero;
+        contentRect.offsetMax = Vector2.zero;
+        contentRect.pivot = new Vector2(0.5f, 1f);
+
+        if (messagesContainer.GetComponent<VerticalLayoutGroup>() == null)
+        {
+            var v = messagesContainer.gameObject.AddComponent<VerticalLayoutGroup>();
+            v.spacing = 18f;
+            v.padding = new RectOffset(20, 20, 20, 20);
+            v.childControlWidth = true;
+            v.childControlHeight = false;
+        }
+        if (messagesContainer.GetComponent<ContentSizeFitter>() == null)
+        {
+            var f = messagesContainer.gameObject.AddComponent<ContentSizeFitter>();
+            f.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        }
+
+        var sr = phonePanel.AddComponent<ScrollRect>();
+        sr.viewport = panelRect;
+        sr.content = contentRect;
+        sr.horizontal = false;
+        sr.vertical = true;
+        sr.movementType = ScrollRect.MovementType.Clamped;
+        sr.scrollSensitivity = 30f;
     }
 }

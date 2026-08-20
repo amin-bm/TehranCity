@@ -218,6 +218,32 @@ public static class ServiceBridge
         WarnNeeds();
     }
 
+    /* ================= Needs: خواندن ================= */
+
+    public static float GetNeed(string needName)
+    {
+        var svc = FindService("NeedsService", "INeedsService");
+        if (svc == null) return 0f;
+        var type = svc.GetType();
+
+        var p = type.GetProperty(needName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        if (p != null && p.PropertyType == typeof(float))
+        {
+            try { return (float)p.GetValue(svc); } catch { }
+        }
+
+        string camel = char.ToLower(needName[0]) + needName.Substring(1);
+        foreach (var fn in new[] { needName, "_" + camel, camel })
+        {
+            var f = type.GetField(fn, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (f != null && f.FieldType == typeof(float))
+            {
+                try { return (float)f.GetValue(svc); } catch { }
+            }
+        }
+        return 0f;
+    }
+
     /* ================= یافتن سرویس ================= */
 
     private static object FindService(params string[] typeNames)
