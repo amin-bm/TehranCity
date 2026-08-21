@@ -1,9 +1,9 @@
 using UnityEngine;
 
 /// <summary>
-/// مینی‌گیم شیفت آزمایشی (قدم ۱۱): دنباله وظایف صندوق/قفسه/مشتری در ۴ دقیقه واقعی.
-/// پایان شیفت: حقوق 600,000 فقط از EconomyService + رویداد OnSalaryReceived.
-/// طبق سند: Phone/Menus = Pause — حین باز بودن گوشی، تایمر و ساعت اسکریپت‌شده شیفت متوقف می‌شوند.
+/// مینی‌گیم شیفت: داده از ShiftService/CSV (قدم ۱۶)؛ پیش‌فرض‌ها فقط fallback.
+/// پایان شیفت: حقوق فقط از EconomyService + رویداد OnSalaryReceived.
+/// Phone/Menus = Pause: حین باز بودن گوشی، تایمر و ساعت اسکریپت‌شده متوقف‌اند.
 /// </summary>
 public class ShiftController : MonoBehaviour
 {
@@ -13,17 +13,21 @@ public class ShiftController : MonoBehaviour
     public Transform customerSpot;
     public SceneDoor door;
 
-    [Header("Balance (فقط از سند Economy)")]
-    public long salary = 600000L;          // دستمزد هر شیفت ساده
-    public float shiftDuration = 240f;     // ۴ دقیقه واقعی = ۶ ساعت بازی
+    [Header("Data (CSV اولویت دارد؛ این‌ها fallback)")]
+    public string shiftId = "trial_shift";
+    public long salary = 600000L;
+    public float shiftDuration = 240f;
 
     public bool IsRunning { get; private set; }
 
-    private static readonly ShiftStationKind[] Sequence =
+    private static readonly ShiftStationKind[] DefaultSequence =
     {
         ShiftStationKind.Register, ShiftStationKind.Customer, ShiftStationKind.Shelf,
         ShiftStationKind.Register, ShiftStationKind.Customer, ShiftStationKind.Shelf
     };
+
+    private ShiftStationKind[] _seq = DefaultSequence;
+    private float _scriptedPerSec = 1.5f; // 360 دقیقه بازی / 240 ثانیه واقعی
 
     private int _taskIndex;
     private float _remaining;
@@ -38,6 +42,20 @@ public class ShiftController : MonoBehaviour
         if (IsRunning) return;
         IsRunning = true;
         _taskIndex = 0;
+
+        var def = ShiftService.Get(shiftId);
+        if (def != null)
+        {
+            salary = def.salary;
+            shiftDuration = def.duration;
+            _seq = def.sequence.Count > 0 ? def.sequence.ToArray() : DefaultSequence;
+            if (def.duration > 0f) _scriptedPerSec = def.scriptedMinutes / def.duration;
+        }
+        else
+        {
+            _seq = DefaultSequence;
+        }
+
         _remaining = shiftDuration;
         _scriptedAcc = 0f;
 
@@ -45,14 +63,14 @@ public class ShiftController : MonoBehaviour
         if (door != null) door.locked = true;
         _hud = ShiftHUD.Show();
         ActivateCurrent();
-        Debug.Log("[Shift] شیفت آزمایشی شروع شد.");
+        Debug.Log($"[Shift] شروع ({shiftId}) salary={salary} duration={shiftDuration}");
     }
 
     private void Update()
     {
         if (!IsRunning) return;
 
-        // Phone/Menus = Pause: حین باز بودن گوشی، همه‌چیزِ شیفت نگه داشته می‌شود
+        // Phone/Menus = Pause
         if (ServiceLocator.TimeService.Mode == TimeMode.Phone) return;
 
         _hudAcc += Time.deltaTime;
@@ -62,8 +80,7 @@ public class ShiftController : MonoBehaviour
             RefreshHud();
         }
 
-        // پیشروی اسکریپت‌شده ساعت بازی: ۴ دقیقه واقعی = ۶ ساعت بازی => 1.5 GameMinute بر ثانیه
-        _scriptedAcc += Time.deltaTime * 1.5f;
+        _scriptedAcc += Time.deltaTime * _scriptedPerSec;
         int whole = Mathf.FloorToInt(_scriptedAcc);
         if (whole > 0)
         {
@@ -82,8 +99,8 @@ public class ShiftController : MonoBehaviour
         float remain = Mathf.Max(0f, _remaining);
         int mm = Mathf.FloorToInt(remain / 60f);
         int ss = Mathf.FloorToInt(remain % 60f);
-        int task = Mathf.Min(_taskIndex + 1, Sequence.Length);
-        _hud.SetText($"شیفت آزمایشی | وظیفه {Fa(task.ToString())} از {Fa(Sequence.Length.ToString())} | زمان {Fa(mm.ToString("00"))}:{Fa(ss.ToString("00"))}");
+        int task = Mathf.Min(_taskIndex + 1, _seq.Length);
+        _hud.SetText($"شیفت آزمایشی | وظیفه {Fa(task.ToString())} از {Fa(_seq.Length.ToString())} | زمان {Fa(mm.ToString("00"))}:{Fa(ss.ToString("00"))}");
     }
 
     private static string Fa(string s)
@@ -97,7 +114,7 @@ public class ShiftController : MonoBehaviour
 
     private void ActivateCurrent()
     {
-        var kind = Sequence[_taskIndex];
+        var kind = _seq[_taskIndex];
         if (stationRegister != null) stationRegister.active = kind == ShiftStationKind.Register;
         if (stationShelf != null) stationShelf.active = kind == ShiftStationKind.Shelf;
         if (kind == ShiftStationKind.Customer) SpawnCustomer();
@@ -127,9 +144,9 @@ public class ShiftController : MonoBehaviour
 
     public void OnStationCompleted(ShiftStation st)
     {
-        if (!IsRunning || st.kind != Sequence[_taskIndex]) return;
+        if (!IsRunning || st.kind != _seq[_taskIndex]) return;
         _taskIndex++;
-        if (_taskIndex >= Sequence.Length)
+        if (_taskIndex >= _seq.Length)
         {
             End(true);
             return;
@@ -149,10 +166,9 @@ public class ShiftController : MonoBehaviour
         ServiceBridge.PopTimeMode();
         if (_hud != null) _hud.Hide();
 
-        // پول فقط از EconomyService + رویداد فقط از EventBus
         ServiceBridge.SetFlag(GameFlags.FirstShiftCompleted, true);
-
         bool paid = ServiceBridge.AddMoney(salary);
+        Debug.Log($"[Shift] AddMoney({salary}) => {paid}");
         ServiceLocator.EventBus.Publish(new SalaryReceivedEvent { Amount = salary });
         Debug.Log($"[Shift] پایان شیفت (completed={completed}). حقوق {salary} واریز شد.");
 
@@ -166,7 +182,6 @@ public class ShiftController : MonoBehaviour
 
     private void OnDestroy()
     {
-        // اگر صحنه وسط شیفت به هر دلیلی unload شد، حالت زمان قفل نماند
         if (IsRunning)
         {
             IsRunning = false;
