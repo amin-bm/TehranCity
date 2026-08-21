@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
-using RTLTMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
@@ -10,9 +9,8 @@ using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 
 /// <summary>
-/// پنل دیالوگ Visual-Novel — کانواس Overlay مستقل بالای همه‌چیز.
-/// حالت‌ها: Line / Choice / Result (مصاحبه، خط ساده، انتخاب خرید و...).
-/// نسخه نهایی یکپارچه — بدون گارد _data در ShowChoices.
+/// پنل دیالوگ Visual-Novel — سطح ۲ قانون متن: TextMeshProUGUI + FaText.Fix
+/// (ارقام/ساعت مثل HUD درست می‌مانند؛ خط‌های خالص فارسی هم درست شکل می‌گیرند).
 /// </summary>
 public class DialogueUI : MonoBehaviour
 {
@@ -26,15 +24,15 @@ public class DialogueUI : MonoBehaviour
     private GameObject _panel;
     private CanvasGroup _panelCanvasGroup;
 
-    private RTLTextMeshPro _nameText;
-    private RTLTextMeshPro _bodyText;
-    private RTLTextMeshPro _hintText;
+    private TextMeshProUGUI _nameText;
+    private TextMeshProUGUI _bodyText;
+    private TextMeshProUGUI _hintText;
 
     private GameObject _choicesRoot;
     private Button _acceptButton;
     private Button _rejectButton;
-    private RTLTextMeshPro _acceptLabel;
-    private RTLTextMeshPro _rejectLabel;
+    private TextMeshProUGUI _acceptLabel;
+    private TextMeshProUGUI _rejectLabel;
 
     private TMP_FontAsset _font;
 
@@ -109,13 +107,13 @@ public class DialogueUI : MonoBehaviour
         _lineClosedCallback = null;
         _wasAccepted = false; _wasRejected = false;
 
-        _acceptLabel.text = data.acceptLabel;
-        _rejectLabel.text = data.rejectLabel;
+        SetFa(_acceptLabel, data.acceptLabel);
+        SetFa(_rejectLabel, data.rejectLabel);
 
         Open();
-        _nameText.text = data.employerName;
-        _bodyText.text = data.employerLine;
-        _hintText.text = "ادامه  [E]";
+        SetFa(_nameText, data.employerName);
+        SetFa(_bodyText, data.employerLine);
+        SetFa(_hintText, "ادامه  [E]");
         _choicesRoot.SetActive(false);
         _state = State.Line;
     }
@@ -132,9 +130,9 @@ public class DialogueUI : MonoBehaviour
         _wasAccepted = false; _wasRejected = false;
 
         Open();
-        _nameText.text = speaker ?? string.Empty;
-        _bodyText.text = text ?? string.Empty;
-        _hintText.text = "ادامه  [E]";
+        SetFa(_nameText, speaker ?? string.Empty);
+        SetFa(_bodyText, text ?? string.Empty);
+        SetFa(_hintText, "ادامه  [E]");
         _choicesRoot.SetActive(false);
         _state = State.Line;
     }
@@ -154,13 +152,13 @@ public class DialogueUI : MonoBehaviour
         _lineClosedCallback = null;
         _wasAccepted = false; _wasRejected = false;
 
-        _acceptLabel.text = acceptLabel;
-        _rejectLabel.text = rejectLabel;
+        SetFa(_acceptLabel, acceptLabel);
+        SetFa(_rejectLabel, rejectLabel);
 
         Open();
-        _nameText.text = speaker ?? string.Empty;
-        _bodyText.text = text ?? string.Empty;
-        _hintText.text = "ادامه  [E]";
+        SetFa(_nameText, speaker ?? string.Empty);
+        SetFa(_bodyText, text ?? string.Empty);
+        SetFa(_hintText, "ادامه  [E]");
         _choicesRoot.SetActive(false);
         _state = State.Line;
     }
@@ -224,7 +222,7 @@ public class DialogueUI : MonoBehaviour
         if (_state != State.Line) return; // بدون گارد _data — برای ShowChoice لازم است
         _state = State.Choice;
         _choicesRoot.SetActive(true);
-        _hintText.text = "کلید یک: قبول — کلید دو: بعداً";
+        SetFa(_hintText, "کلید یک: قبول — کلید دو: بعداً");
         _inputUnlockTime = Time.unscaledTime + 0.2f;
     }
 
@@ -236,8 +234,8 @@ public class DialogueUI : MonoBehaviour
         if (string.IsNullOrEmpty(line)) { Close(); return; }
         _state = State.Result;
         _choicesRoot.SetActive(false);
-        _bodyText.text = line;
-        _hintText.text = "ادامه  [E]";
+        SetFa(_bodyText, line);
+        SetFa(_hintText, "ادامه  [E]");
         _inputUnlockTime = Time.unscaledTime + 0.25f;
     }
 
@@ -249,8 +247,8 @@ public class DialogueUI : MonoBehaviour
         if (string.IsNullOrEmpty(line)) { Close(); return; }
         _state = State.Result;
         _choicesRoot.SetActive(false);
-        _bodyText.text = line;
-        _hintText.text = "ادامه  [E]";
+        SetFa(_bodyText, line);
+        SetFa(_hintText, "ادامه  [E]");
         _inputUnlockTime = Time.unscaledTime + 0.25f;
     }
 
@@ -281,7 +279,7 @@ public class DialogueUI : MonoBehaviour
 
     private void BuildPanel()
     {
-        _panel = new GameObject("DialoguePanel", typeof(RectTransform), typeof(Image), typeof(VerticalLayoutGroup), typeof(CanvasGroup));
+        _panel = new GameObject("DialoguePanel", typeof(RectTransform), typeof(UnityEngine.UI.Image), typeof(VerticalLayoutGroup), typeof(CanvasGroup));
         _panel.transform.SetParent(_canvas.transform, false);
 
         var rt = _panel.GetComponent<RectTransform>();
@@ -291,7 +289,7 @@ public class DialogueUI : MonoBehaviour
         rt.anchoredPosition = new Vector2(0f, 50f);
         rt.sizeDelta = new Vector2(1200f, 380f);
 
-        var image = _panel.GetComponent<Image>();
+        var image = _panel.GetComponent<UnityEngine.UI.Image>();
         image.color = new Color(0.03f, 0.03f, 0.06f, 0.88f);
         image.raycastTarget = true;
 
@@ -306,15 +304,15 @@ public class DialogueUI : MonoBehaviour
 
         _panelCanvasGroup = _panel.GetComponent<CanvasGroup>();
 
-        _nameText = CreateRTLText(_panel.transform, "NameText", string.Empty, 30, TextAlignmentOptions.TopRight, new Color(1f, 0.85f, 0.25f));
+        _nameText = CreateFaText(_panel.transform, "NameText", string.Empty, 30, TextAlignmentOptions.TopRight, new Color(1f, 0.85f, 0.25f));
         _nameText.gameObject.AddComponent<LayoutElement>().preferredHeight = 40f;
 
-        _bodyText = CreateRTLText(_panel.transform, "BodyText", string.Empty, 36, TextAlignmentOptions.TopRight, Color.white);
+        _bodyText = CreateFaText(_panel.transform, "BodyText", string.Empty, 36, TextAlignmentOptions.TopRight, Color.white);
         var bodyLE = _bodyText.gameObject.AddComponent<LayoutElement>();
         bodyLE.minHeight = 150f;
         bodyLE.preferredHeight = 150f;
 
-        _hintText = CreateRTLText(_panel.transform, "HintText", string.Empty, 22, TextAlignmentOptions.TopRight, new Color(0.75f, 0.75f, 0.75f));
+        _hintText = CreateFaText(_panel.transform, "HintText", string.Empty, 22, TextAlignmentOptions.TopRight, new Color(0.75f, 0.75f, 0.75f));
         _hintText.gameObject.AddComponent<LayoutElement>().preferredHeight = 32f;
 
         _choicesRoot = new GameObject("Choices", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
@@ -332,33 +330,38 @@ public class DialogueUI : MonoBehaviour
         _acceptButton = CreateButton(_choicesRoot.transform, "AcceptButton", ChooseAccept);
         _rejectButton = CreateButton(_choicesRoot.transform, "RejectButton", ChooseReject);
 
-        _acceptLabel = _acceptButton.GetComponentInChildren<RTLTextMeshPro>();
-        _rejectLabel = _rejectButton.GetComponentInChildren<RTLTextMeshPro>();
+        _acceptLabel = _acceptButton.GetComponentInChildren<TextMeshProUGUI>();
+        _rejectLabel = _rejectButton.GetComponentInChildren<TextMeshProUGUI>();
 
         _choicesRoot.SetActive(false);
     }
 
-    private RTLTextMeshPro CreateRTLText(Transform parent, string name, string initialText, int fontSize, TextAlignmentOptions alignment, Color color)
+    private TextMeshProUGUI CreateFaText(Transform parent, string name, string initialText, int fontSize, TextAlignmentOptions alignment, Color color)
     {
         var go = new GameObject(name, typeof(RectTransform));
         go.transform.SetParent(parent, false);
-        var text = go.AddComponent<RTLTextMeshPro>();
-        if (_font != null) text.font = _font;
-        text.text = initialText;
-        text.fontSize = fontSize;
-        text.alignment = alignment;
-        text.color = color;
-        text.textWrappingMode = TextWrappingModes.Normal;
-        text.raycastTarget = false;
-        return text;
+        var tmp = go.AddComponent<TextMeshProUGUI>();
+        if (_font != null) tmp.font = _font;
+        tmp.fontSize = fontSize;
+        tmp.alignment = alignment;
+        tmp.color = color;
+        tmp.textWrappingMode = TextWrappingModes.Normal;
+        tmp.raycastTarget = false;
+        tmp.text = FaText.Fix(initialText);
+        return tmp;
+    }
+
+    private static void SetFa(TextMeshProUGUI tmp, string s)
+    {
+        if (tmp != null) tmp.text = FaText.Fix(s);
     }
 
     private Button CreateButton(Transform parent, string name, Action onClick)
     {
-        var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
+        var go = new GameObject(name, typeof(RectTransform), typeof(UnityEngine.UI.Image), typeof(Button));
         go.transform.SetParent(parent, false);
 
-        var img = go.GetComponent<Image>();
+        var img = go.GetComponent<UnityEngine.UI.Image>();
         img.color = new Color(0.13f, 0.13f, 0.18f, 0.96f);
         img.raycastTarget = true;
 
@@ -371,14 +374,14 @@ public class DialogueUI : MonoBehaviour
 
         var labelGO = new GameObject("Label", typeof(RectTransform));
         labelGO.transform.SetParent(go.transform, false);
-        var label = labelGO.AddComponent<RTLTextMeshPro>();
+        var label = labelGO.AddComponent<TextMeshProUGUI>();
         if (_font != null) label.font = _font;
-        label.text = string.Empty;
         label.fontSize = 28;
         label.alignment = TextAlignmentOptions.Center;
         label.color = Color.white;
         label.textWrappingMode = TextWrappingModes.Normal;
         label.raycastTarget = false;
+        label.text = FaText.Fix(string.Empty);
 
         var lrt = labelGO.GetComponent<RectTransform>();
         lrt.anchorMin = Vector2.zero;
@@ -415,20 +418,16 @@ public class DialogueUI : MonoBehaviour
     {
         var systems = FindObjectsByType<EventSystem>(FindObjectsSortMode.None);
         var es = systems.Length > 0 ? systems[0] : null;
-
         if (es == null)
         {
             var go = new GameObject("EventSystem");
             es = go.AddComponent<EventSystem>();
             go.AddComponent<InputSystemUIInputModule>();
-            DontDestroyOnLoad(go); // <= ماندگار بین همه‌ی صحنه‌ها
+            DontDestroyOnLoad(go);
             return;
         }
-
         if (es.GetComponent<BaseInputModule>() == null)
             es.gameObject.AddComponent<InputSystemUIInputModule>();
-
-        // اگر EventSystem صحنه‌ایِ روت است، آن را هم ماندگار کن تا با unload نابود نشود
         if (es.transform.parent == null && es.gameObject.scene.name != "DontDestroyOnLoad")
             DontDestroyOnLoad(es.gameObject);
     }

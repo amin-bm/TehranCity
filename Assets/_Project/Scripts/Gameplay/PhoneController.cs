@@ -38,7 +38,7 @@ public class PhoneController : MonoBehaviour
         for (int i = 0; i < messages.Count; i++)
             if (messages[i] == null) Debug.LogError($"[Phone] messages[{i}] NULL است!");
         phonePanel.SetActive(false);
-        EnsureScroll();
+        FixLayoutPadding();
     }
 
     private void Update()
@@ -149,44 +149,15 @@ public class PhoneController : MonoBehaviour
         tmp.text = text;
     }
 
-    /// <summary>اسکرول‌پذیر کردن لیست پیام‌ها تا پیام‌های روزهای بعد جا شوند.</summary>
-    private void EnsureScroll()
+    /// <summary>فقط فاصله از لبه‌ی بالا؛ بدون دست‌کاری anchor/والد.</summary>
+    private void FixLayoutPadding()
     {
-        if (phonePanel == null || messagesContainer == null) return;
-        var panelRect = phonePanel.GetComponent<RectTransform>();
-        var contentRect = messagesContainer.GetComponent<RectTransform>();
-        if (panelRect == null || contentRect == null) return;
-        if (phonePanel.GetComponent<ScrollRect>() != null) return;
-
-        if (phonePanel.GetComponent<RectMask2D>() == null && phonePanel.GetComponent<Mask>() == null)
-            phonePanel.AddComponent<RectMask2D>();
-
-        contentRect.anchorMin = Vector2.zero;
-        contentRect.anchorMax = Vector2.one;
-        contentRect.offsetMin = Vector2.zero;
-        contentRect.offsetMax = Vector2.zero;
-        contentRect.pivot = new Vector2(0.5f, 1f);
-
-        if (messagesContainer.GetComponent<VerticalLayoutGroup>() == null)
-        {
-            var v = messagesContainer.gameObject.AddComponent<VerticalLayoutGroup>();
-            v.spacing = 18f;
-            v.padding = new RectOffset(20, 20, 20, 20);
-            v.childControlWidth = true;
-            v.childControlHeight = false;
-        }
-        if (messagesContainer.GetComponent<ContentSizeFitter>() == null)
-        {
-            var f = messagesContainer.gameObject.AddComponent<ContentSizeFitter>();
-            f.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-        }
-
-        var sr = phonePanel.AddComponent<ScrollRect>();
-        sr.viewport = panelRect;
-        sr.content = contentRect;
-        sr.horizontal = false;
-        sr.vertical = true;
-        sr.movementType = ScrollRect.MovementType.Clamped;
-        sr.scrollSensitivity = 30f;
+        if (messagesContainer == null) return;
+        var vlg = messagesContainer.GetComponent<VerticalLayoutGroup>();
+        if (vlg == null) vlg = messagesContainer.gameObject.AddComponent<VerticalLayoutGroup>();
+        vlg.padding = new RectOffset(24, 24, 40, 20);
+        vlg.spacing = 18f;
+        vlg.childControlWidth = true;
+        vlg.childControlHeight = false;
     }
 }

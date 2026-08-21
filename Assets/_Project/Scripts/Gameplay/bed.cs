@@ -33,7 +33,6 @@ public class Bed : MonoBehaviour, IInteractable
 
         // فشار اجاره: پیام دیروز ندیده مانده؟
         var phone = FindFirstObjectByType<PhoneController>(FindObjectsInactive.Include);
-        Debug.Log($"[Bed] phone instance={(phone != null ? phone.GetInstanceID().ToString() : "null")}");
 
         if (phone != null && PhoneController.ConsumeUnseenAny())
         {
