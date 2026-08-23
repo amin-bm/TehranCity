@@ -1,28 +1,27 @@
 using UnityEngine;
-
 /// <summary>
-/// کنترلر placeholder آرش - فاز ۱ (نسخه Canonical PC-10.6)
+/// کنترلر placeholder آرش - فاز ۱ (نسخه Canonical PC-10.8: + Animator Speed)
 /// </summary>
 public class PlayerController : MonoBehaviour
 {
-    private const string BUILD_TAG = "PC-10.7";
+    private const string BUILD_TAG = "PC-10.8";
 
     [Header("Move")]
     [SerializeField] private float walkSpeed = 3f;
     [SerializeField] private float rotationSmooth = 12f;
     [SerializeField] private float gravity = -20f;
-
+    [Header("Animator")]
+    [SerializeField] private Animator animator;
     [HideInInspector] public bool inputLocked;
 
     private CharacterController _controller;
     private TehranCityInput _input;
+    private Animator _animator;
     private float _vy;
     private float _speedMultiplier = 1f;
-
     private Vector3 _safePos; private float _safeY; private bool _hasSafe;
     private Vector3 _intendedSpawn; private float _lockUntil = -1f;
     private Vector3 _lastPos; private bool _hasLast;
-
     private readonly RaycastHit[] _rayBuffer = new RaycastHit[8];
 
     public Vector2 MoveInput { get; private set; }
@@ -32,42 +31,32 @@ public class PlayerController : MonoBehaviour
     private void Awake()
     {
         _lockWarned = false;
-        // خودتمیزی داده صحنه: Rigidbody/CapsuleCollider سرگردان حذف شود
         var rb = GetComponent<Rigidbody>();
         if (rb != null) { Debug.LogWarning($"[Player] Rigidbody سرگردان روی Player حذف شد (scene='{gameObject.scene.name}')"); Destroy(rb); }
         var col = GetComponent<CapsuleCollider>();
         if (col != null) { Debug.LogWarning("[Player] CapsuleCollider سرگردان حذف شد."); Destroy(col); }
-
         _controller = GetComponent<CharacterController>();
+        _animator = animator != null ? animator : GetComponentInChildren<Animator>(true);
+        if (_animator != null) _animator.applyRootMotion = false;
         _input = new TehranCityInput();
-
         if (!string.IsNullOrEmpty(SceneTransition.PendingSpawn))
         {
             var spawnName = SceneTransition.PendingSpawn;
             var sp = GameObject.Find(spawnName);
             if (sp == null)
                 sp = FindSpawnInActiveScene(spawnName)?.gameObject;
-
             if (sp != null)
                 transform.position = sp.transform.position + Vector3.up * 1.05f;
             else
                 Debug.LogWarning($"[Player] PendingSpawn '{spawnName}' پیدا نشد!");
-
             SceneTransition.PendingSpawn = "";
-
             _intendedSpawn = transform.position;
             _lockUntil = Time.time + 0.75f;
         }
-
         GroundSnap();
         MarkSafe();
         _intendedSpawn = transform.position;
         _lastPos = transform.position; _hasLast = true;
-
-        // فیکس ریشه‌ای «برگشت یک‌فریمی به موقعیت editor»:
-        // بدنه فیزیک CC با موقعیت asset صحنه ساخته شده؛ با بازسازی بدنه + SyncTransforms
-        // موقعیت جدید همین حالا به دنیای فیزیک push می‌شود تا در اولین گام فیزیک
-        // transform به مقدار قدیمی برنگردد.
         _controller.enabled = false;
         _controller.enabled = true;
         Physics.SyncTransforms();
@@ -76,25 +65,24 @@ public class PlayerController : MonoBehaviour
 
     private void OnEnable() => _input.Gameplay.Enable();
     private void OnDisable() => _input.Gameplay.Disable();
-
     public void SetSpeedMultiplier(float m) => _speedMultiplier = m;
 
     private void Update()
     {
         float dt = Mathf.Min(Time.deltaTime, 1f / 30f);
-
         WatchJump();
-
         MoveInput = inputLocked ? Vector2.zero : _input.Gameplay.Move.ReadValue<Vector2>();
         if (MoveInput.sqrMagnitude > 1f) MoveInput = MoveInput.normalized;
-
         Vector3 dir = CameraRelativeDir(MoveInput);
+
+        // درایو Animator (Idle<->Walk) با همان ورودی حرکت
+        if (_animator != null)
+            _animator.SetFloat("Speed", Mathf.Clamp01(MoveInput.magnitude), 0.15f, dt);
 
         bool nearGround = false;
         if (GroundRay(transform.position + Vector3.up * 2f, 12f, out RaycastHit hit))
         {
             float feetY = transform.position.y - 1f;
-
             if (feetY < hit.point.y - 0.02f)
             {
                 transform.position = new Vector3(transform.position.x, hit.point.y + 1f, transform.position.z);
@@ -105,14 +93,10 @@ public class PlayerController : MonoBehaviour
                 nearGround = true; _vy = 0f; MarkSafe();
             }
         }
-
         if (!nearGround) _vy += gravity * dt;
-
         Vector3 velocity = dir * (walkSpeed * _speedMultiplier);
         velocity.y = _vy;
         _controller.Move(velocity * dt);
-
-        // قفل اسپان: تا 0.75s بعد از انتقال، هر جابه‌جایی >2.5m یعنی دخالت خارجی؛ برگردان
         if (Time.time < _lockUntil && (transform.position - _intendedSpawn).sqrMagnitude > 6.25f)
         {
             transform.position = _intendedSpawn;
@@ -123,25 +107,19 @@ public class PlayerController : MonoBehaviour
                 Debug.LogWarning("[Player] SpawnLock: یک پرش خارجی مسدود شد.");
             }
         }
-
         if (_hasSafe && transform.position.y < _safeY - 2.5f)
         {
             transform.position = _safePos; _vy = 0f;
             Debug.LogWarning("[Player] Fall rescue!");
         }
-
         if (dir.sqrMagnitude > 0.001f)
         {
             Quaternion target = Quaternion.LookRotation(dir);
             transform.rotation = Quaternion.Slerp(transform.rotation, target, rotationSmooth * dt);
         }
-
         _lastPos = transform.position; _hasLast = true;
     }
 
-    private string intended() => _intendedSpawn.ToString("F2");
-
-    /// <summary>ضبط‌کننده پرش: هر جابه‌جایی ناگهانی >1.5m بین دو فریم را با شماره فریم لاگ می‌کند.</summary>
     private void WatchJump()
     {
         if (_hasLast && (transform.position - _lastPos).sqrMagnitude > 2.25f)
