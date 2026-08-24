@@ -31,3 +31,5 @@ MonoBehaviour:
     clip: {fileID: 8300000, guid: bf299af346720144b8b2b8ad76516e2e, type: 3}
   - key: AMB_Shop
     clip: {fileID: 8300000, guid: 74d966eb3c561e94c8d9d5796db2a99e, type: 3}
+  - key: MUS_Main
+    clip: {fileID: 8300000, guid: 0f2482e16e3568846808d25bb3f63562, type: 3}

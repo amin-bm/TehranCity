@@ -3,14 +3,15 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// فاز A / قدم A6 — کارگردان صدا. v3: فال‌بک هوشمند AudioListener
-/// (اگر دوربینِ شنونده رسید، فال‌بک حذف می‌شود؛ اگر هیچ نبود، ساخته می‌شود).
+/// فاز A / قدم A7 — کارگردان صدا: Ambience + SFX + Music (هر سه لوپ/پخش از AudioBank).
+/// فال‌بک هوشمند AudioListener حفظ شده است.
 /// </summary>
 public class AudioDirector : MonoBehaviour
 {
     private static AudioDirector _inst;
     private AudioSource _amb;
     private AudioSource _sfx;
+    private AudioSource _mus;
     private AudioBank _bank;
     private AudioListener _fallbackListener;
     private readonly Dictionary<string, AudioClip> _cache = new();
@@ -43,6 +44,10 @@ public class AudioDirector : MonoBehaviour
         _amb.loop = true; _amb.playOnAwake = false; _amb.volume = 0.6f;
         _sfx = gameObject.AddComponent<AudioSource>();
         _sfx.playOnAwake = false; _sfx.volume = 0.9f;
+        _mus = gameObject.AddComponent<AudioSource>();
+        _mus.loop = true; _mus.playOnAwake = false; _mus.volume = 0.35f;
+        var music = Load("MUS_Main");
+        if (music != null) { _mus.clip = music; _mus.Play(); }
         SceneManager.sceneLoaded += OnSceneLoaded;
         ServiceLocator.Ensure();
         var bus = ServiceLocator.EventBus;
@@ -59,7 +64,6 @@ public class AudioDirector : MonoBehaviour
         if (_inst == this) _inst = null;
     }
 
-    /// <summary>تضمین دقیقاً یک AudioListener: فال‌بک فقط وقتی هیچ‌کس ندارد؛ با رسیدن شنونده‌ی دوربین، فال‌بک حذف.</summary>
     private void SyncListener()
     {
         var all = FindObjectsByType<AudioListener>(FindObjectsInactive.Include, FindObjectsSortMode.None);
@@ -133,7 +137,7 @@ public class AudioDirector : MonoBehaviour
         if (_cache.TryGetValue(name, out var c)) return c;
         if (_bank == null) _bank = Resources.Load<AudioBank>("AudioBank");
         c = _bank != null ? _bank.Get(name) : null;
-        if (c == null) Debug.LogWarning($"[Audio] کلیپ در AudioBank نیست: {name} — Setup 23 را اجرا کن.");
+        if (c == null) Debug.LogWarning($"[Audio] کلیپ در AudioBank نیست: {name} — Setup 23/24 را اجرا کن.");
         _cache[name] = c;
         return c;
     }
