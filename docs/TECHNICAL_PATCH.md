@@ -172,3 +172,61 @@ Clip/Pause؛ خواب/روز+حلقه صاحب‌خانه؛ ShiftService/CSV؛ �
 
 ### ۱۹. Changelog
 [1.2.0] — دمو First Hour کامل: مصاحبه VN + شیفت مینی‌گیم + حقوق/خرید + Save/Load + خلاصه روز + خواب/چرخه‌ی روز + حلقه‌ی صاحب‌خانه + Clip/Pause + شیفت CSV + بیلد Release تمیز (۰ خطا/۰ اخطار، ۶۰FPS).
+
+الحاقیه‌ی 2.0-patch — فاز A: پولیش نمایش (قدم‌های A0 تا A10، تگ v1.1-phase-a)
+status: Approved — حاکم بر هر تضاد با متن قبلی
+
+۱. گرافیک (اصلاح ADR-002 / ADR-006)
+- پروژه روی Built-in RP بود؛ با asset ی `URP_TehranCity` (پوشه Settings) روی Default Render Pipeline، URP رسمی شد (HDR On، MSAA 4x).
+- جهت هنری placeholder: «کیت استایلیزه‌ی رویه‌ای به سبک The Precinct» (رنگ تخت اشباع، Low-Poly، بدون تکسچر). استراتژی free-first (بودجه صفر)؛ سواپ بعدی با پک CC0 رایگان (Quaternius/KayKit) در صورت دسترسی.
+- قانون Art Pass: کولایدرهای greybox دست‌نخورده؛ آبجکت‌های تزئینی بدون کولایدر و static (برای بیک).
+
+۲. ابزارهای Editor (تکمیل بخش‌های ۸/۱۴ — منوها اکنون ۱ تا ۳۰)
+18 Art Kit (Palette: 47 متریال در Materials/Stylized + helperهای ArtKit) —
+19 Room Art Pass — 20 Alley Art Pass — 21 Shop + Facade Art Pass —
+22 Character Mannequin + Animator — 23 Audio Placeholder — 24 Music Placeholder —
+25 Lighting + Probes — 26 Bake Each Scene (Sync + Auto-Save) — 27 Cancel Bake —
+28 Lighting Polish (Shadows ON + Sun Up) — 29 Post Processing — 30 Generate README.
+همه idempotent. الگوی ذخیره‌ی صحنه در همه: MarkSceneDirty + SaveScene per-scene.
+
+۳. کاراکتر
+مانکن بلوکی رویه‌ای (سلسله‌مراتب Pelvis/Pivot_Arm_*/Pivot_Leg_*) + دو کلیپ تولیدشده AC_Arash_Idle/Walk + کنترلر AC_Arash (پارامتر Speed).
+PlayerController = PC-10.8: درایو Animator با SetFloat("Speed", MoveInput.magnitude, damp).
+کپسول نارنجی و FacingNose فقط پنهان شده‌اند (حذف نشده‌اند)؛ کامپوننت‌ها/کولایدر دست‌نخورده.
+
+۴. صدا و موسیقی
+ساختار: Audio/SFX (۶ wav رویه‌ای) + Audio/Ambience (۳ wav لوپ) + Audio/Music (MUS_Main).
+`AudioBank` (ScriptableObject) = تنها asset داخل Resources (رفرنس کلیپ‌ها)؛ فایل‌های واقعی در ساختار مصوب؛ سواپ = جایگزینی هم‌نام + اجرای دوباره 23/24.
+`AudioDirector` (Core): خودبوسترپ DDOL با RuntimeInitializeOnLoadMethod؛ Ambience per-scene؛ قدم با پولینگ IsMoving؛ سکه/خرج با دلتای موجودی روی BalanceChangedEvent؛ whoosh هنگام لود صحنه.
+AudioListener: روی Main Camera ماندگار + فال‌بک هوشمند در AudioDirector (تضمین دقیقاً یک شنونده).
+Interactor: یک خط `AudioDirector.Play("interact")` اضافه شد.
+
+۵. نور و Post Processing
+نورها Mixed؛ ambient هر صحنه از RenderSettings (Trilight)؛ LightProbeGroup per-scene + ReflectionProbe اتاق.
+قاعده‌ی بیک: فقط تک‌صحنه‌ای (بیک additive چند صحنه، داده را به پوشه‌ی صحنه‌ی active می‌نویسد — باگ مشاهده‌شده). Setup 26 = OpenScene single + Lightmapping.Bake() همگام + SaveScene.
+نورهای Directional ساخته‌شده با کد، سایه خاموش دارند → Setup 28: LightShadows.Soft + شدت 1.2 + خورشید Euler(62,-35,0) + shadowDistance=80.
+Post Processing: VolumeProfile (Bloom threshold 0.9/intensity 1.3/scatter 0.7 + ColorAdjustments گرم + Vignette 0.3) + GlobalVolume per-scene + renderPostProcessing روی Main Camera.
+
+۶. یادداشت‌های API در Unity 6.3 (الحاق به بخش‌های ۷/۱۸)
+- `EditorSceneManager.SaveOpenScenes()` در کانتکست منو قابل اتکا نیست؛ الگوی رسمی: MarkSceneDirty + SaveScene per-scene.
+- `AnimatorController` اسکریپتابل‌آبجکت نیست: ساخت با `CreateAnimatorControllerAtPath`؛ شرط ترنزیشن با `AddCondition(AnimatorConditionMode, threshold, param)` (متدی به نام AddParameterCondition وجود ندارد)؛ گارد `AddLayer` قبل از `layers[0]`.
+- `AudioImporter` و `AudioImporterSampleSettings` فیلد loopTime ندارند؛ لوپ فقط با `AudioSource.loop` ران‌تایم.
+- `LightingSettings` API بسیار محدود دارد (ambientMode/skyboxMaterial/environmentMode/directionalMode/denoiserType ندارند؛ bounces منسوخ→maxBounces)؛ ambient مال `RenderSettings` است (enum: UnityEngine.Rendering.AmbientMode).
+- `Lightmapping.lightingSettingsAsset` وجود ندارد.
+- `ReflectionProbe.type` منسوخ است؛ فقط `mode`.
+- URP Bloom: softKnee/diffusion/anamorphicRatio/color/fastMode ندارد (scatter/tint/highQualityFiltering/skipIterations دارد)؛ Vignette: mode/roundness ندارد؛ `Volume` فیلد trigger ندارد؛ ساخت کامپوننت با `VolumeProfile.Add<T>(true)`.
+- دروازه‌ی Post Processing: `camera.GetUniversalAdditionalCameraData().renderPostProcessing = true`.
+- دسترسی به URP asset: `GraphicsSettings.defaultRenderPipeline as UniversalRenderPipelineAsset`؛ `shadowDistance` ست‌شدنی است.
+- Scene view (حالت‌های نمایش نور) می‌تواند با رندر واقعی فرق کند؛ معیار قضاوت فقط Game view با Draw Mode = Shaded.
+
+۷. فایل‌ها/پوشه‌های جدید (اصلاح بخش ۴ ساختار)
+- Assets/_Project/Resources/AudioBank.asset (تنها عضو Resources)
+- پوشه‌ی Audio/Ambience به ساختار مصوب اضافه شد
+- Art/Characters/ (AC_Arash.controller + دو کلیپ) + متریال‌های MATC_Skin/MATC_Hair
+- Settings/URP_TehranCity.asset + PostProcessProfile.asset
+- _Project/README_CONTROLS.md
+- Scripts/Editor: ArtKit, RoomArtPass, AlleyArtPass, ShopArtPass, CharacterSetup, AudioSetup, MusicSetup, LightingSetup, PostProcessingSetup, ReadmeSetup
+- Scripts/Core: AudioDirector, AudioBank
+
+۸. Changelog
+[1.3.0] — فاز A کامل: فعال‌سازی URP؛ Art Pass کامل Precinct-style سه صحنه (کولایدرها دست‌نخورده)؛ کاراکتر مانکن + Animator؛ صدا/موسیقی رویه‌ای + AudioDirector DDOL؛ نور بیک + Probeها + سایه Soft؛ Post Processing؛ README کنترل‌ها. بیلد ۰ خطا/۰ اخطار، ۶۰FPS.

@@ -557,36 +557,40 @@ render pipeline: URP
 ## ۴. ساختار پوشه پروژه
 ```
 Assets/
-  _Project/
-    Art/
-      Characters/
-      Environment/
-        Narmak/
-      Props/
-      UI/
-    Audio/
-      Music/
-      SFX/
-    Data/
-      ScriptableObjects/
-      Balance/
-    Prefabs/
-      Characters/
-      NPCs/
-      Interactables/
-      UI/
-    Scenes/
-      Bootstrap.unity
-      Main Menu.unity
-      Prototype_Block01.unity
-      Interior_Room01.unity
-      Interior_MobileShop01.unity
-    Scripts/
-      Core/
-      Gameplay/
-      UI/
-      Data/
-      Settings/
+   _Project/
+     README_CONTROLS.md
+     Art/
+       Characters/
+       Environment/
+         Narmak/
+       Props/
+       UI/
+     Audio/
+       Music/
+       SFX/
+       Ambience/
+     Data/
+       ScriptableObjects/
+       Balance/
+     Prefabs/
+       Characters/
+       NPCs/
+       Interactables/
+       UI/
+     Resources/
+       AudioBank.asset
+     Scenes/
+       Bootstrap.unity
+       Main Menu.unity
+       Prototype_Block01.unity
+       Interior_Room01.unity
+       Interior_MobileShop01.unity
+     Scripts/
+       Core/
+       Gameplay/
+       UI/
+       Data/
+       Settings/
 ```
 
 ## ۵. Assembly Definitions پیشنهادی
@@ -1061,6 +1065,9 @@ owner: Project Lead
 ## فاز ۳ - دموی ساعت اول (مدت: ۳ تا ۵ هفته)
 - دیالوگ‌ها، پاساژ / مغازه، مصاحبه، شیفت اول، مغازه خیلی کوچک هدف، خلاصه پایان روز، Clip Mode ساده
 - **خروجی:** دموی ۲۰ تا ۶۰ دقیقه‌ای قابل تست.
+فاز A - پولیش نمایش (انجام‌شده — تگ v1.1-phase-a)
+فعال‌سازی URP؛ Art Pass کامل سه صحنه به سبک Precinct؛ کاراکتر مانکن + Animator؛ صدا/موسیقی رویه‌ای؛ نور بیک + Probeها + سایه Soft؛ Post Processing؛ README کنترل‌ها.
+خروجی: دمو با ظاهر، صدا و نور قابل‌قبول (قدم‌های A0 تا A10).
 
 ## معیار موفقیت دمو
 | معیار | هدف |
@@ -1131,6 +1138,8 @@ owner: Project Lead
 | آنلاین | بعداً، معماری آماده |
 | درآمد | هدف اولیه نیست |
 | کاراکتر | یکی در نمونه اولیه |
+| بودجه خرید Asset|صفر / free-first (کیت رویه‌ای baseline)|
+| کاراکتر فاز A|مانکن رویه‌ای بلوکی؛ پک رایگان CC0 بعداً|
 
 ## سؤال‌های باز فعلی
 | سؤال | وضعیت |
@@ -1138,7 +1147,6 @@ owner: Project Lead
 | دقیقاً از کدام Asset Store Pack استفاده شود؟ | Open |
 | نام نهایی محصول چه باشد؟ | Open |
 | دمو روی چه پلتفرمی منتشر شود؟ سایت؟ کافه بازار؟ | Open |
-| بودجه خرید Asset چقدر است؟ | Open |
 | آیا یک آرتیست پاره‌وقت داریم؟ | Open |
 | لحن طنز چقدر تند باشد؟ | Open |
 | فونت نهایی چیست؟ | Open |
@@ -1191,6 +1199,7 @@ owner: Project Lead
 
 ## سبک نهایی
 **Stylized Low-Poly / Semi-Cartoon**
+جهت هنری placeholder فاز A: کیت استایلیزه رویه‌ای به سبک The Precinct (رنگ تخت اشباع، Low-Poly)؛ استراتژی free-first؛ سواپ بعدی با پک CC0 رایگان.
 
 ### هدف
 - ساخت سریع با Assetهای آماده
@@ -1243,6 +1252,8 @@ owner: Project Lead
 ---
 
 # Tehran City - Changelog
+
+[1.3.0] — فاز A کامل: فعال‌سازی URP؛ Art Pass کامل Precinct-style سه صحنه (کولایدرها دست‌نخورده)؛ کاراکتر مانکن + Animator؛ صدا/موسیقی رویه‌ای + AudioDirector DDOL؛ نور بیک + Probeها + سایه Soft؛ Post Processing؛ README کنترل‌ها. بیلد ۰ خطا/۰ اخطار، ۶۰FPS. (تگ v1.1-phase-a)
 
 ## [1.0.0] - 2026-08-08
 
