@@ -28,7 +28,6 @@ public class ShiftController : MonoBehaviour
 
     private ShiftStationKind[] _seq = DefaultSequence;
     private float _scriptedPerSec = 1.5f; // 360 دقیقه بازی / 240 ثانیه واقعی
-
     private int _taskIndex;
     private float _remaining;
     private float _scriptedAcc;
@@ -61,8 +60,10 @@ public class ShiftController : MonoBehaviour
 
         ServiceBridge.PushTimeMode("Scripted");
         if (door != null) door.locked = true;
+
         _hud = ShiftHUD.Show();
         ActivateCurrent();
+
         Debug.Log($"[Shift] شروع ({shiftId}) salary={salary} duration={shiftDuration}");
     }
 
@@ -117,8 +118,10 @@ public class ShiftController : MonoBehaviour
         var kind = _seq[_taskIndex];
         if (stationRegister != null) stationRegister.active = kind == ShiftStationKind.Register;
         if (stationShelf != null) stationShelf.active = kind == ShiftStationKind.Shelf;
+
         if (kind == ShiftStationKind.Customer) SpawnCustomer();
         else DespawnCustomer();
+
         RefreshHud();
     }
 
@@ -162,13 +165,18 @@ public class ShiftController : MonoBehaviour
         if (stationRegister != null) stationRegister.active = false;
         if (stationShelf != null) stationShelf.active = false;
         DespawnCustomer();
+
         if (door != null) door.locked = false;
+
         ServiceBridge.PopTimeMode();
         if (_hud != null) _hud.Hide();
 
         ServiceBridge.SetFlag(GameFlags.FirstShiftCompleted, true);
-        bool paid = ServiceBridge.AddMoney(salary);
+
+        // اصلاح قانون سرسختانه: ارسال صریح پارامتر reason
+        bool paid = ServiceBridge.AddMoney(salary, "ShiftSalary");
         ServiceLocator.EventBus.Publish(new SalaryReceivedEvent { Amount = salary });
+
         Debug.Log($"[Shift] پایان شیفت (completed={completed}). حقوق {salary} واریز شد.");
 
         DialogueUI.Instance.ShowLine(

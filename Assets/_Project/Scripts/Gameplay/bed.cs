@@ -13,8 +13,8 @@ public class Bed : MonoBehaviour, IInteractable
     public float hungerDeltaOnWake = -20f;
     public float socialDeltaOnWake = -5f;
     public float unseenLandlordStress = 4f;
-
     public string prompt = "خوابیدن";
+
     public string Prompt => prompt;
     public bool CanInteract => true;
 
@@ -30,27 +30,39 @@ public class Bed : MonoBehaviour, IInteractable
     private void Sleep()
     {
         var time = ServiceLocator.TimeService;
+        int currentDay = time.Day;
 
-        // فشار اجاره: پیام دیروز ندیده مانده؟
+        // ۱. بررسی اجاره و فشار صاحب‌خانه (روز سررسید: روز ۷)
+        if (currentDay == 7 && !ServiceBridge.GetFlag(GameFlags.RentPaidDay7))
+        {
+            ServiceBridge.SetFlag(GameFlags.EvictionWarningActive, true);
+            ServiceBridge.AddNeed("Stress", 20f); // جریمه استرس سنگین طبق منطق Eviction
+            PhoneController.BroadcastRuntime("صاحب‌خانه", "اجاره عقب افتاده! فردا صبح باید تخلیه کنی. این آخرین اخطاره.");
+            Debug.Log("[Landlord] Eviction warning triggered due to unpaid rent on Day 7.");
+        }
+
+        // ۲. فشار استرس پیام ندیده
         var phone = FindFirstObjectByType<PhoneController>(FindObjectsInactive.Include);
-
         if (phone != null && PhoneController.ConsumeUnseenAny())
         {
             ServiceBridge.AddNeed("Stress", unseenLandlordStress);
             Debug.Log("[Landlord] پیام صاحب‌خانه ندیده ماند -> +استرس.");
         }
 
-        // Sleep = skip به صبح فردا
+        // ۳. Sleep = skip به صبح فردا
         time.SetDateTime(time.Day + 1, 7, 30);
 
-        // ریست نیازها
+        // ۴. ریست نیازها
         ServiceBridge.AddNeed("Energy", energyOnWake - ServiceBridge.GetNeed("Energy"));
         ServiceBridge.AddNeed("Stress", stressDeltaOnWake);
         ServiceBridge.AddNeed("Hunger", hungerDeltaOnWake);
         ServiceBridge.AddNeed("Social", socialDeltaOnWake);
 
-        // روایت فشار اجاره: پیام صبحگاهی صاحب‌خانه
-        PhoneController.BroadcastRuntime("صاحب‌خانه", LandlordLine(time.Day));
+        // ۵. روایت پیام صبحگاهی صاحب‌خانه (فقط اگر اخراج نشده باشد)
+        if (!ServiceBridge.GetFlag(GameFlags.EvictionWarningActive))
+        {
+            PhoneController.BroadcastRuntime("صاحب‌خانه", LandlordLine(time.Day));
+        }
 
         Debug.Log($"[Sleep] بیدار شدی @ روز {time.Day} | ۰۷:۳۰");
         // Save + خلاصه‌ی پایان روز: خودکار توسط SaveDirector (تشخیص تغییر روز)

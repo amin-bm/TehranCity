@@ -1,2 +1,4 @@
 # id,salary,duration_real_sec,sequence,scripted_minutes
 trial_shift,600000,240,register;customer;shelf;register;customer;shelf,360
+day2_shift,650000,300,register;customer;shelf;register;customer;shelf;register,450
+day3_shift,700000,360,register;customer;shelf;register;customer;shelf;register;customer,540
